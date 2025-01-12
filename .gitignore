@@ -1,0 +1,19 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Dependency directories (remove the comment below to include it)
+vendor/
+bin/
+dist/
+
+# IDE's
+.idea
+.vscode
+
+coverage.txt
