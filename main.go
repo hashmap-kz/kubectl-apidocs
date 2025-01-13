@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -13,6 +14,7 @@ import (
 	"k8s.io/client-go/discovery"
 	openapiclient "k8s.io/client-go/openapi"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/kube-openapi/pkg/util/proto"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/openapi"
 )
@@ -120,6 +122,52 @@ func start() error {
 		return err
 	}
 	fmt.Println(gvarMap, gvrs)
+
+	/////// tests ///////
+
+	o.inputFieldPath = "po"
+	if gvar, ok := gvarMap[o.inputFieldPath]; ok {
+		o.inputFieldPathRegex = regexp.MustCompile(".*")
+		o.gvrs = []schema.GroupVersionResource{gvar.GroupVersionResource}
+		// return nil
+	}
+
+	var paths []path
+	for _, gvr := range o.gvrs {
+		visitor := &schemaVisitor{
+			pathSchema: make(map[path]proto.Schema),
+			prevPath: path{
+				original:     strings.ToLower(gvr.Resource),
+				withBrackets: strings.ToLower(gvr.Resource),
+			},
+			err: nil,
+		}
+		gvk, err := o.mapper.KindFor(gvr)
+		if err != nil {
+			return fmt.Errorf("get the group version kind: %w", err)
+		}
+		s := o.schema.LookupResource(gvk)
+		if s == nil {
+			return fmt.Errorf("no schema found for %s", gvk)
+		}
+		s.Accept(visitor)
+		if visitor.err != nil {
+			return visitor.err
+		}
+		filteredPaths := visitor.listPaths(func(s path) bool {
+			return o.inputFieldPathRegex.MatchString(s.original)
+		})
+		for _, p := range filteredPaths {
+			// pathExplainers[p] = explainer{
+			// 	gvr:                 gvr,
+			// 	openAPIV3Client:     o.cachedOpenAPIV3Client,
+			// 	enablePrintPath:     !o.disablePrintPath,
+			// 	enablePrintBrackets: o.showBrackets,
+			// }
+			paths = append(paths, p)
+		}
+	}
+
 	return nil
 }
 
