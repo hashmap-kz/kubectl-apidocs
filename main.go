@@ -28,6 +28,32 @@ type Node struct {
 	Children map[string]*Node `json:"children,omitempty"`
 }
 
+// SortChildren recursively sorts the children of the node
+func (n *Node) SortChildren() {
+	if n.Children == nil {
+		return
+	}
+
+	// Extract and sort the keys
+	keys := make([]string, 0, len(n.Children))
+	for key := range n.Children {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	// Create a new sorted map
+	sortedChildren := make(map[string]*Node, len(n.Children))
+	for _, key := range keys {
+		child := n.Children[key]
+		// Recursively sort the children of each child
+		child.SortChildren()
+		sortedChildren[key] = child
+	}
+
+	// Replace the old map with the sorted one
+	n.Children = sortedChildren
+}
+
 // AddPath adds a path to the tree
 func (n *Node) AddPath(path []string) {
 	if len(path) == 0 {
@@ -127,14 +153,39 @@ func buildTreeView(rootNode *Node) *tview.TreeView {
 			parent.SetColor(tcell.ColorGreen)
 			parent.SetExpanded(!parent.IsExpanded())
 		}
-		for _, child := range children {
-			childNode := tview.NewTreeNode(child.Name).SetReference(child)
+
+		keys := make([]string, 0, len(children))
+		for key := range children {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		for _, key := range keys {
+			childNode := tview.NewTreeNode(children[key].Name).SetReference(key)
 			parent.AddChild(childNode)
-			if child.Children != nil {
-				addChildren(childNode, child.Children)
+			if children[key].Children != nil {
+				addChildren(childNode, children[key].Children)
 			}
 		}
 	}
+
+	// no-sort
+	// // Recursive function to add children
+	// var addChildren func(parent *tview.TreeNode, children map[string]*Node)
+	// addChildren = func(parent *tview.TreeNode, children map[string]*Node) {
+	// 	if len(children) != 0 {
+	// 		parent.SetColor(tcell.ColorGreen)
+	// 		parent.SetExpanded(!parent.IsExpanded())
+	// 	}
+	// 	for _, child := range children {
+	// 		childNode := tview.NewTreeNode(child.Name).SetReference(child)
+	// 		parent.AddChild(childNode)
+	// 		if child.Children != nil {
+	// 			addChildren(childNode, child.Children)
+	// 		}
+	// 	}
+	// }
+	//
 
 	// Add children to the root
 	addChildren(root, rootNode.Children)
@@ -246,6 +297,7 @@ func printTree() error {
 		path := strings.Split(line.original, ".")
 		root.AddPath(path)
 	}
+	root.SortChildren()
 
 	// Create the tree view
 	treeView := buildTreeView(root)
