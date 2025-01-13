@@ -115,11 +115,11 @@ func start() error {
 	}
 	fmt.Print(c)
 
-	a, b, err := o.discover()
+	gvarMap, gvrs, err := o.discover()
 	if err != nil {
 		return err
 	}
-	fmt.Println(a, b)
+	fmt.Println(gvarMap, gvrs)
 	return nil
 }
 
