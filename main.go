@@ -246,7 +246,7 @@ func printTree() error {
 
 	/////// tests ///////
 
-	o.inputFieldPath = "po"
+	o.inputFieldPath = "httproute"
 	if gvar, ok := gvarMap[o.inputFieldPath]; ok {
 		o.inputFieldPathRegex = regexp.MustCompile(".*")
 		o.gvrs = []schema.GroupVersionResource{gvar.GroupVersionResource}
