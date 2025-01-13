@@ -19,6 +19,33 @@ import (
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
+// Node represents a node in the tree
+type Node struct {
+	Name     string           `json:"name"`
+	Children map[string]*Node `json:"children,omitempty"`
+}
+
+// AddPath adds a path to the tree
+func (n *Node) AddPath(path []string) {
+	if len(path) == 0 {
+		return
+	}
+
+	// Get the current level key
+	key := path[0]
+
+	// Ensure the child exists
+	if n.Children == nil {
+		n.Children = make(map[string]*Node)
+	}
+	if _, exists := n.Children[key]; !exists {
+		n.Children[key] = &Node{Name: key}
+	}
+
+	// Recurse to add the rest of the path
+	n.Children[key].AddPath(path[1:])
+}
+
 type Options struct {
 	// User input
 	apiVersion       string
@@ -166,6 +193,15 @@ func start() error {
 			// }
 			paths = append(paths, p)
 		}
+	}
+
+	// Create root node
+	root := &Node{Name: "root"}
+
+	// Add each path to the tree
+	for _, line := range paths {
+		path := strings.Split(line.original, ".")
+		root.AddPath(path)
 	}
 
 	return nil
