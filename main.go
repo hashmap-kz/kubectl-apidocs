@@ -246,11 +246,20 @@ func printTree() error {
 
 	/////// tests ///////
 
-	o.inputFieldPath = "httproute"
-	if gvar, ok := gvarMap[o.inputFieldPath]; ok {
+	// for _, gvrsItem := range gvrs {
+	// 	if gvar, ok := gvarMap[gvrsItem.Resource]; ok {
+	// 		o.inputFieldPathRegex = regexp.MustCompile(".*")
+	// 		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
+	// 	}
+	// }
+
+	if gvar, ok := gvarMap["httproutes"]; ok {
 		o.inputFieldPathRegex = regexp.MustCompile(".*")
-		o.gvrs = []schema.GroupVersionResource{gvar.GroupVersionResource}
-		// return nil
+		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
+	}
+	if gvar, ok := gvarMap["gateways"]; ok {
+		o.inputFieldPathRegex = regexp.MustCompile(".*")
+		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
 	}
 
 	var paths []path
