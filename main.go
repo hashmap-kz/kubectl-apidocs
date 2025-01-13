@@ -232,17 +232,17 @@ func printTree() error {
 		return err
 	}
 
-	c, err := f.OpenAPIV3Client()
-	if err != nil {
-		return err
-	}
-	fmt.Print(c)
+	// c, err := f.OpenAPIV3Client()
+	// if err != nil {
+	// 	return err
+	// }
+	// fmt.Print(c)
 
-	gvarMap, gvrs, err := o.discover()
+	gvarMap, _, err := o.discover()
 	if err != nil {
 		return err
 	}
-	fmt.Println(gvarMap, gvrs)
+	// fmt.Println(gvarMap, gvrs)
 
 	/////// tests ///////
 
