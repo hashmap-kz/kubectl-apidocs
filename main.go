@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -16,6 +18,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/kube-openapi/pkg/util/proto"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+	"k8s.io/kubectl/pkg/explain"
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
@@ -112,7 +115,47 @@ func NewOptions(streams genericclioptions.IOStreams) *Options {
 	}
 }
 
-func start() error {
+// buildTreeView creates a tview.TreeView from a Node
+func buildTreeView(rootNode *Node) *tview.TreeView {
+	// Create the root tree node
+	root := tview.NewTreeNode(rootNode.Name).SetColor(tview.Styles.PrimitiveBackgroundColor).SetExpanded(true)
+
+	// Recursive function to add children
+	var addChildren func(parent *tview.TreeNode, children map[string]*Node)
+	addChildren = func(parent *tview.TreeNode, children map[string]*Node) {
+		if len(children) != 0 {
+			parent.SetColor(tcell.ColorGreen)
+			parent.SetExpanded(!parent.IsExpanded())
+		}
+		for _, child := range children {
+			childNode := tview.NewTreeNode(child.Name).SetReference(child)
+			parent.AddChild(childNode)
+			if child.Children != nil {
+				addChildren(childNode, child.Children)
+			}
+		}
+	}
+
+	// Add children to the root
+	addChildren(root, rootNode.Children)
+
+	// Create the TreeView
+	tree := tview.NewTreeView().
+		SetRoot(root).
+		SetCurrentNode(root)
+
+	// Add key event handler for toggling node expansion
+	tree.SetSelectedFunc(func(node *tview.TreeNode) {
+		if node == nil {
+			return
+		}
+		node.SetExpanded(!node.IsExpanded())
+	})
+
+	return tree
+}
+
+func printTree() error {
 	o := NewOptions(genericclioptions.IOStreams{
 		In:     os.Stdin,
 		Out:    os.Stdout,
@@ -204,14 +247,103 @@ func start() error {
 		root.AddPath(path)
 	}
 
+	// Create the tree view
+	treeView := buildTreeView(root)
+
+	// Create the application
+	app := tview.NewApplication()
+	if err := app.SetRoot(treeView, true).Run(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return err
+	}
+
 	return nil
 }
 
 func main() {
-	start()
+	printTree()
 }
 
 // Copy from https://github.com/kubernetes/kubectl/blob/4f380d07c5e5bb41a037a72c4b35c7f828ba2d59/pkg/cmd/cmd.go#L95-L97
 func defaultConfigFlags() *genericclioptions.ConfigFlags {
 	return genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(300).WithDiscoveryQPS(50.0)
+}
+
+// schema visitor
+
+type path struct {
+	original     string
+	withBrackets string
+}
+
+func (p path) isEmpty() bool {
+	return p.original == "" && p.withBrackets == ""
+}
+
+type schemaVisitor struct {
+	prevPath   path
+	pathSchema map[path]proto.Schema
+	err        error
+}
+
+var _ proto.SchemaVisitor = (*schemaVisitor)(nil)
+
+func (v *schemaVisitor) VisitKind(k *proto.Kind) {
+	keys := k.Keys()
+	paths := make([]path, len(keys))
+	for i, key := range keys {
+		paths[i] = path{
+			original:     strings.Join([]string{v.prevPath.original, key}, "."),
+			withBrackets: strings.Join([]string{v.prevPath.withBrackets, key}, "."),
+		}
+	}
+	for i, key := range keys {
+		schema, err := explain.LookupSchemaForField(k, []string{key})
+		if err != nil {
+			v.err = err
+			return
+		}
+		if _, ok := schema.(*proto.Array); ok {
+			paths[i].withBrackets += "[]"
+		}
+		v.pathSchema[paths[i]] = schema
+		v.prevPath = paths[i]
+		schema.Accept(v)
+	}
+}
+
+var visitedReferences = map[string]struct{}{}
+
+func (v *schemaVisitor) VisitReference(r proto.Reference) {
+	if _, ok := visitedReferences[r.Reference()]; ok {
+		return
+	}
+	visitedReferences[r.Reference()] = struct{}{}
+	r.SubSchema().Accept(v)
+	delete(visitedReferences, r.Reference())
+}
+
+func (*schemaVisitor) VisitPrimitive(*proto.Primitive) {
+	// Nothing to do.
+}
+
+func (v *schemaVisitor) VisitArray(a *proto.Array) {
+	a.SubType.Accept(v)
+}
+
+func (v *schemaVisitor) VisitMap(m *proto.Map) {
+	m.SubType.Accept(v)
+}
+
+func (v *schemaVisitor) listPaths(filter func(path) bool) []path {
+	paths := make([]path, 0, len(v.pathSchema))
+	for path := range v.pathSchema {
+		if filter(path) {
+			paths = append(paths, path)
+		}
+	}
+	sort.SliceStable(paths, func(i, j int) bool {
+		return paths[i].original < paths[j].original
+	})
+	return paths
 }
