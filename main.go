@@ -202,14 +202,6 @@ func buildTreeView(rootNode *Node) *tview.TreeView {
 	tree.SetTitle("Resources")
 	// tree.SetBorderColor(tcell.ColorBlue)
 
-	// Add key event handler for toggling node expansion
-	tree.SetSelectedFunc(func(node *tview.TreeNode) {
-		if node == nil {
-			return
-		}
-		node.SetExpanded(!node.IsExpanded())
-	})
-
 	return tree
 }
 
@@ -329,6 +321,23 @@ func printTree() error {
 	detailsView.SetTitle("Field Details")
 	detailsView.SetScrollable(true)
 	detailsView.SetWrap(true)
+
+	// Add key event handler for toggling node expansion
+	tree.SetSelectedFunc(func(node *tview.TreeNode) {
+		if node == nil {
+			return
+		}
+		node.SetExpanded(!node.IsExpanded())
+	})
+
+	// Handle selection changes
+	tree.SetChangedFunc(func(node *tview.TreeNode) {
+		if node == nil {
+			return
+		}
+		ref := node.GetReference()
+		detailsView.SetText(fmt.Sprintf("%v", ref))
+	})
 
 	// Handle node selection to display field details.
 	// tree.SetSelectedFunc(func(node *tview.TreeNode) {
