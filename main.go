@@ -145,9 +145,9 @@ func NewOptions(streams genericclioptions.IOStreams) *Options {
 }
 
 // buildTreeView creates a tview.TreeView from a Node
-func buildTreeView(rootNode *Node) *tview.TreeView {
+func buildTreeView(rootNode *Node) (*tview.TreeNode, *tview.TreeView) {
 	// Create the root tree node
-	root := tview.NewTreeNode(rootNode.Name).SetColor(tview.Styles.PrimitiveBackgroundColor).SetExpanded(true)
+	rootTree := tview.NewTreeNode(rootNode.Name).SetColor(tview.Styles.PrimitiveBackgroundColor).SetExpanded(true)
 
 	// Recursive function to add children
 	var addChildren func(parent *tview.TreeNode, children map[string]*Node)
@@ -191,18 +191,18 @@ func buildTreeView(rootNode *Node) *tview.TreeView {
 	//
 
 	// Add children to the root
-	addChildren(root, rootNode.Children)
+	addChildren(rootTree, rootNode.Children)
 
 	// Create the TreeView
 	tree := tview.NewTreeView().
-		SetRoot(root).
-		SetCurrentNode(root)
+		SetRoot(rootTree).
+		SetCurrentNode(rootTree)
 
 	tree.SetBorder(true)
 	tree.SetTitle("Resources")
 	// tree.SetBorderColor(tcell.ColorBlue)
 
-	return tree
+	return rootTree, tree
 }
 
 func printTree() error {
@@ -312,7 +312,7 @@ func printTree() error {
 	/////// UI ///////
 
 	// Create the tree view
-	tree := buildTreeView(root)
+	rootTree, tree := buildTreeView(root)
 
 	// Create a TextView to display field details.
 	detailsView := tview.NewTextView()
@@ -335,8 +335,10 @@ func printTree() error {
 		if node == nil {
 			return
 		}
-		ref := node.GetReference()
-		detailsView.SetText(fmt.Sprintf("%v", ref))
+
+		path := getNodePath(rootTree, node)
+		path = strings.TrimPrefix(path, "/root.")
+		detailsView.SetText(path)
 	})
 
 	// Handle node selection to display field details.
@@ -377,6 +379,36 @@ func printTree() error {
 	// }
 
 	return nil
+}
+
+// Helper function to find the path of a node from root
+func getNodePath(root, target *tview.TreeNode) string {
+	var path []string
+	if findPathRecursive(root, target, &path) {
+		return "/" + joinPath(path)
+	}
+	return "Node not found"
+}
+
+// Recursive function to find the path
+func findPathRecursive(current, target *tview.TreeNode, path *[]string) bool {
+	*path = append(*path, current.GetText())
+	if current == target {
+		return true
+	}
+	for _, child := range current.GetChildren() {
+		if findPathRecursive(child, target, path) {
+			return true
+		}
+	}
+	// Backtrack if target is not found in this branch
+	*path = (*path)[:len(*path)-1]
+	return false
+}
+
+// Helper function to join path components
+func joinPath(path []string) string {
+	return strings.Join(path, ".")
 }
 
 func main() {
