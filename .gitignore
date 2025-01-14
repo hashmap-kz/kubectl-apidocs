@@ -14,6 +14,6 @@ dist/
 
 # IDE's
 .idea
-.vscode
+# .vscode
 
 coverage.txt

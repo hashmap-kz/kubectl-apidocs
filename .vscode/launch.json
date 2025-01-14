@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+      {
+          "name": "Debug tview Application",
+          "type": "go",
+          "request": "launch",
+          "mode": "debug",
+          "program": "${workspaceFolder}/main.go",
+          "args": [],
+          "env": {},
+          "console": "integratedTerminal"
+      }
+  ]
+}
