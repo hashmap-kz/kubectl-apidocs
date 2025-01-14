@@ -255,6 +255,10 @@ func printTree() error {
 	// 	}
 	// }
 
+	if gvar, ok := gvarMap["statefulsets"]; ok {
+		o.inputFieldPathRegex = regexp.MustCompile(".*")
+		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
+	}
 	if gvar, ok := gvarMap["httproutes"]; ok {
 		o.inputFieldPathRegex = regexp.MustCompile(".*")
 		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
