@@ -15,7 +15,43 @@ func App(root *Node, pathExplainers map[string]Explainer) {
 	/////// UI ///////
 
 	// Create the tree view
-	rootTree, tree := buildTreeView(root)
+	// Create the root tree node
+	rootTree := tview.NewTreeNode(root.Name).SetColor(tview.Styles.PrimitiveBackgroundColor).SetExpanded(true)
+
+	// Recursive function to add children
+	var addChildren func(parent *tview.TreeNode, children map[string]*Node)
+	addChildren = func(parent *tview.TreeNode, children map[string]*Node) {
+		if len(children) != 0 {
+			parent.SetColor(tcell.ColorGreen)
+			parent.SetExpanded(!parent.IsExpanded())
+		}
+
+		keys := make([]string, 0, len(children))
+		for key := range children {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		for _, key := range keys {
+			childNode := tview.NewTreeNode(children[key].Name).SetReference(key)
+			parent.AddChild(childNode)
+			if children[key].Children != nil {
+				addChildren(childNode, children[key].Children)
+			}
+		}
+	}
+
+	// Add children to the root
+	addChildren(rootTree, root.Children)
+
+	// Create the TreeView
+	tree := tview.NewTreeView().
+		SetRoot(rootTree).
+		SetCurrentNode(rootTree)
+
+	tree.SetBorder(true)
+	tree.SetTitle("Resources")
+
 	rootTree.SetExpanded(true)
 
 	// Create a TextView to display field details.
@@ -26,12 +62,28 @@ func App(root *Node, pathExplainers map[string]Explainer) {
 	detailsView.SetScrollable(true)
 	detailsView.SetWrap(true)
 
+	// Stack to handle navigation back
+	var stack []*tview.TreeNode
+	stack = append(stack, rootTree)
+
 	// Add key event handler for toggling node expansion
 	tree.SetSelectedFunc(func(node *tview.TreeNode) {
 		if node == nil {
 			return
 		}
-		node.SetExpanded(!node.IsExpanded())
+
+		// open subview with a subtree
+		if len(node.GetChildren()) > 0 &&
+			(node.GetText() == "gateways" || node.GetText() == "statefulsets") { // Subtree with children
+			stack = append(stack, node)
+			tree.SetRoot(node).
+				SetCurrentNode(node)
+
+			node.SetExpanded(true)
+		} else {
+			// just expand subtree
+			node.SetExpanded(!node.IsExpanded())
+		}
 	})
 
 	// Handle selection changes
@@ -60,6 +112,16 @@ func App(root *Node, pathExplainers map[string]Explainer) {
 			app.SetFocus(detailsView) // Switch focus to the DetailsView
 			return nil
 		}
+
+		// back to the root (step back) by ESC
+		if event.Key() == tcell.KeyEscape && len(stack) > 1 {
+			stack = stack[:len(stack)-1]
+			prevNode := stack[len(stack)-1]
+			tree.SetRoot(prevNode).
+				SetCurrentNode(prevNode)
+			return nil
+		}
+
 		return event
 	})
 
@@ -86,50 +148,6 @@ func App(root *Node, pathExplainers map[string]Explainer) {
 	if err := app.SetRoot(layout, true).Run(); err != nil {
 		panic(err)
 	}
-}
-
-// buildTreeView creates a tview.TreeView from a Node
-func buildTreeView(rootNode *Node) (*tview.TreeNode, *tview.TreeView) {
-	// Create the root tree node
-	rootTree := tview.NewTreeNode(rootNode.Name).SetColor(tview.Styles.PrimitiveBackgroundColor).SetExpanded(true)
-
-	// Recursive function to add children
-	var addChildren func(parent *tview.TreeNode, children map[string]*Node)
-	addChildren = func(parent *tview.TreeNode, children map[string]*Node) {
-		if len(children) != 0 {
-			parent.SetColor(tcell.ColorGreen)
-			parent.SetExpanded(!parent.IsExpanded())
-		}
-
-		keys := make([]string, 0, len(children))
-		for key := range children {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-
-		for _, key := range keys {
-			childNode := tview.NewTreeNode(children[key].Name).SetReference(key)
-			parent.AddChild(childNode)
-			if children[key].Children != nil {
-				addChildren(childNode, children[key].Children)
-			}
-		}
-	}
-
-	// Add children to the root
-	addChildren(rootTree, rootNode.Children)
-
-	// Create the TreeView
-	tree := tview.NewTreeView().
-		SetRoot(rootTree).
-		SetCurrentNode(rootTree)
-
-	tree.SetBorder(true)
-	tree.SetTitle("Resources")
-	// tree.SetBorderColor(tcell.ColorBlue)
-	// tree.GetRoot().SetExpanded(true)
-
-	return rootTree, tree
 }
 
 // Helper function to find the path of a node from root
