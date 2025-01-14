@@ -1,0 +1,163 @@
+package app
+
+import (
+	"bytes"
+	"fmt"
+	"sort"
+	"strings"
+
+	"github.com/gdamore/tcell/v2"
+
+	"github.com/rivo/tview"
+)
+
+func App(root *Node, pathExplainers map[string]Explainer) {
+	/////// UI ///////
+
+	// Create the tree view
+	rootTree, tree := buildTreeView(root)
+	rootTree.SetExpanded(true)
+
+	// Create a TextView to display field details.
+	detailsView := tview.NewTextView()
+	detailsView.SetDynamicColors(true)
+	detailsView.SetBorder(true)
+	detailsView.SetTitle("Field Details")
+	detailsView.SetScrollable(true)
+	detailsView.SetWrap(true)
+
+	// Add key event handler for toggling node expansion
+	tree.SetSelectedFunc(func(node *tview.TreeNode) {
+		if node == nil {
+			return
+		}
+		node.SetExpanded(!node.IsExpanded())
+	})
+
+	// Handle selection changes
+	tree.SetChangedFunc(func(node *tview.TreeNode) {
+		if node == nil {
+			return
+		}
+
+		path := getNodePath(rootTree, node)
+		path = strings.TrimPrefix(path, "/root.")
+		detailsView.SetText(path)
+
+		if explainer, ok := pathExplainers[path]; ok {
+			buf := bytes.Buffer{}
+			explainer.Explain(&buf, path)
+
+			detailsView.SetText(fmt.Sprintf("%s\n\n%s", path, buf.String()))
+		}
+	})
+
+	app := tview.NewApplication()
+
+	// Handle TAB key to switch focus between views
+	tree.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			app.SetFocus(detailsView) // Switch focus to the DetailsView
+			return nil
+		}
+		return event
+	})
+
+	detailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			app.SetFocus(tree) // Switch focus to the TreeView
+			return nil
+		}
+		return event
+	})
+
+	// Create a layout to arrange the UI components.
+	layout := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(
+			tview.NewFlex().
+				AddItem(tree, 0, 1, true).
+				AddItem(detailsView, 0, 1, false),
+			0, 1, true,
+		)
+
+	// Set up the app and start it.
+
+	if err := app.SetRoot(layout, true).Run(); err != nil {
+		panic(err)
+	}
+}
+
+// buildTreeView creates a tview.TreeView from a Node
+func buildTreeView(rootNode *Node) (*tview.TreeNode, *tview.TreeView) {
+	// Create the root tree node
+	rootTree := tview.NewTreeNode(rootNode.Name).SetColor(tview.Styles.PrimitiveBackgroundColor).SetExpanded(true)
+
+	// Recursive function to add children
+	var addChildren func(parent *tview.TreeNode, children map[string]*Node)
+	addChildren = func(parent *tview.TreeNode, children map[string]*Node) {
+		if len(children) != 0 {
+			parent.SetColor(tcell.ColorGreen)
+			parent.SetExpanded(!parent.IsExpanded())
+		}
+
+		keys := make([]string, 0, len(children))
+		for key := range children {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		for _, key := range keys {
+			childNode := tview.NewTreeNode(children[key].Name).SetReference(key)
+			parent.AddChild(childNode)
+			if children[key].Children != nil {
+				addChildren(childNode, children[key].Children)
+			}
+		}
+	}
+
+	// Add children to the root
+	addChildren(rootTree, rootNode.Children)
+
+	// Create the TreeView
+	tree := tview.NewTreeView().
+		SetRoot(rootTree).
+		SetCurrentNode(rootTree)
+
+	tree.SetBorder(true)
+	tree.SetTitle("Resources")
+	// tree.SetBorderColor(tcell.ColorBlue)
+	// tree.GetRoot().SetExpanded(true)
+
+	return rootTree, tree
+}
+
+// Helper function to find the path of a node from root
+func getNodePath(root, target *tview.TreeNode) string {
+	var path []string
+	if findPathRecursive(root, target, &path) {
+		return "/" + joinPath(path)
+	}
+	return "Node not found"
+}
+
+// Recursive function to find the path
+func findPathRecursive(current, target *tview.TreeNode, path *[]string) bool {
+	*path = append(*path, current.GetText())
+	if current == target {
+		return true
+	}
+	for _, child := range current.GetChildren() {
+		if findPathRecursive(child, target, path) {
+			return true
+		}
+	}
+	// Backtrack if target is not found in this branch
+	*path = (*path)[:len(*path)-1]
+	return false
+}
+
+// Helper function to join path components
+func joinPath(path []string) string {
+	return strings.Join(path, ".")
+}
