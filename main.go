@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -262,7 +263,7 @@ func printTree() error {
 		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
 	}
 
-	pathExplainers := make(map[path]explainer)
+	pathExplainers := make(map[string]explainer)
 	var paths []path
 	for _, gvr := range o.gvrs {
 		visitor := &schemaVisitor{
@@ -289,7 +290,7 @@ func printTree() error {
 			return o.inputFieldPathRegex.MatchString(s.original)
 		})
 		for _, p := range filteredPaths {
-			pathExplainers[p] = explainer{
+			pathExplainers[p.original] = explainer{
 				gvr:                 gvr,
 				openAPIV3Client:     o.cachedOpenAPIV3Client,
 				enablePrintPath:     !o.disablePrintPath,
@@ -339,6 +340,13 @@ func printTree() error {
 		path := getNodePath(rootTree, node)
 		path = strings.TrimPrefix(path, "/root.")
 		detailsView.SetText(path)
+
+		if explainer, ok := pathExplainers[path]; ok {
+			buf := bytes.Buffer{}
+			explainer.explain(&buf, path)
+
+			detailsView.SetText(fmt.Sprintf("%s\n\n%s", path, buf.String()))
+		}
 	})
 
 	// Handle node selection to display field details.
@@ -510,22 +518,16 @@ type explainer struct {
 	enablePrintBrackets bool
 }
 
-func (e explainer) explain(w io.Writer, path path) error {
-	if path.isEmpty() {
+func (e explainer) explain(w io.Writer, path string) error {
+	if len(path) == 0 {
 		return fmt.Errorf("path must not be empty: %#v", path)
 	}
-	fields := strings.Split(path.original, ".")
+	fields := strings.Split(path, ".")
 	if len(fields) > 0 {
 		// Remove resource name
 		fields = fields[1:]
 	}
-	if e.enablePrintPath {
-		if e.enablePrintBrackets {
-			w.Write([]byte(fmt.Sprintf("PATH: %s\n", path.withBrackets)))
-		} else {
-			w.Write([]byte(fmt.Sprintf("PATH: %s\n", path.original)))
-		}
-	}
+
 	return explainv2.PrintModelDescription(
 		fields,
 		w,
