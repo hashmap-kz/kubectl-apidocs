@@ -363,6 +363,25 @@ func printTree() error {
 	// 	}
 	// })
 
+	app := tview.NewApplication()
+
+	// Handle TAB key to switch focus between views
+	tree.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			app.SetFocus(detailsView) // Switch focus to the DetailsView
+			return nil
+		}
+		return event
+	})
+
+	detailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			app.SetFocus(tree) // Switch focus to the TreeView
+			return nil
+		}
+		return event
+	})
+
 	// Create a layout to arrange the UI components.
 	layout := tview.NewFlex().
 		SetDirection(tview.FlexRow).
@@ -374,7 +393,7 @@ func printTree() error {
 		)
 
 	// Set up the app and start it.
-	app := tview.NewApplication()
+
 	if err := app.SetRoot(layout, true).Run(); err != nil {
 		panic(err)
 	}
