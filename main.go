@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"regexp"
 	"sort"
@@ -20,6 +21,8 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/explain"
 	"k8s.io/kubectl/pkg/util/openapi"
+
+	explainv2 "k8s.io/kubectl/pkg/explain/v2"
 )
 
 // Node represents a node in the tree
@@ -197,7 +200,7 @@ func buildTreeView(rootNode *Node) *tview.TreeView {
 
 	tree.SetBorder(true)
 	tree.SetTitle("Resources")
-	tree.SetBorderColor(tcell.ColorBlue)
+	// tree.SetBorderColor(tcell.ColorBlue)
 
 	// Add key event handler for toggling node expansion
 	tree.SetSelectedFunc(func(node *tview.TreeNode) {
@@ -236,11 +239,12 @@ func printTree() error {
 		return err
 	}
 
-	// c, err := f.OpenAPIV3Client()
-	// if err != nil {
-	// 	return err
-	// }
-	// fmt.Print(c)
+	// TODO: cached
+	c, err := f.OpenAPIV3Client()
+	if err != nil {
+		return err
+	}
+	o.cachedOpenAPIV3Client = c
 
 	gvarMap, _, err := o.discover()
 	if err != nil {
@@ -266,6 +270,7 @@ func printTree() error {
 		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
 	}
 
+	pathExplainers := make(map[path]explainer)
 	var paths []path
 	for _, gvr := range o.gvrs {
 		visitor := &schemaVisitor{
@@ -292,12 +297,12 @@ func printTree() error {
 			return o.inputFieldPathRegex.MatchString(s.original)
 		})
 		for _, p := range filteredPaths {
-			// pathExplainers[p] = explainer{
-			// 	gvr:                 gvr,
-			// 	openAPIV3Client:     o.cachedOpenAPIV3Client,
-			// 	enablePrintPath:     !o.disablePrintPath,
-			// 	enablePrintBrackets: o.showBrackets,
-			// }
+			pathExplainers[p] = explainer{
+				gvr:                 gvr,
+				openAPIV3Client:     o.cachedOpenAPIV3Client,
+				enablePrintPath:     !o.disablePrintPath,
+				enablePrintBrackets: o.showBrackets,
+			}
 			paths = append(paths, p)
 		}
 	}
@@ -374,6 +379,7 @@ func defaultConfigFlags() *genericclioptions.ConfigFlags {
 	return genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(300).WithDiscoveryQPS(50.0)
 }
 
+//////////////////////////////////////////////////////////////////////
 // schema visitor
 
 type path struct {
@@ -451,4 +457,40 @@ func (v *schemaVisitor) listPaths(filter func(path) bool) []path {
 		return paths[i].original < paths[j].original
 	})
 	return paths
+}
+
+//////////////////////////////////////////////////////////////////////
+// explainer
+
+type explainer struct {
+	gvr                 schema.GroupVersionResource
+	openAPIV3Client     openapiclient.Client
+	enablePrintPath     bool
+	enablePrintBrackets bool
+}
+
+func (e explainer) explain(w io.Writer, path path) error {
+	if path.isEmpty() {
+		return fmt.Errorf("path must not be empty: %#v", path)
+	}
+	fields := strings.Split(path.original, ".")
+	if len(fields) > 0 {
+		// Remove resource name
+		fields = fields[1:]
+	}
+	if e.enablePrintPath {
+		if e.enablePrintBrackets {
+			w.Write([]byte(fmt.Sprintf("PATH: %s\n", path.withBrackets)))
+		} else {
+			w.Write([]byte(fmt.Sprintf("PATH: %s\n", path.original)))
+		}
+	}
+	return explainv2.PrintModelDescription(
+		fields,
+		w,
+		e.openAPIV3Client,
+		e.gvr,
+		false,
+		"plaintext",
+	)
 }
