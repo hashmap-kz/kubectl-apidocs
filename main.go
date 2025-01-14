@@ -195,6 +195,10 @@ func buildTreeView(rootNode *Node) *tview.TreeView {
 		SetRoot(root).
 		SetCurrentNode(root)
 
+	tree.SetBorder(true)
+	tree.SetTitle("Resources")
+	tree.SetBorderColor(tcell.ColorBlue)
+
 	// Add key event handler for toggling node expansion
 	tree.SetSelectedFunc(func(node *tview.TreeNode) {
 		if node == nil {
@@ -308,15 +312,55 @@ func printTree() error {
 	}
 	root.SortChildren()
 
-	// Create the tree view
-	treeView := buildTreeView(root)
+	/////// UI ///////
 
-	// Create the application
+	// Create the tree view
+	tree := buildTreeView(root)
+
+	// Create a TextView to display field details.
+	detailsView := tview.NewTextView()
+	detailsView.SetDynamicColors(true)
+	detailsView.SetBorder(true)
+	detailsView.SetTitle("Field Details")
+	detailsView.SetScrollable(true)
+	detailsView.SetWrap(true)
+
+	// Handle node selection to display field details.
+	// tree.SetSelectedFunc(func(node *tview.TreeNode) {
+	// 	fieldProps := node.GetReference()
+	// 	if props, ok := fieldProps.(map[string]interface{}); ok {
+	// 		details := "Details:\n"
+	// 		for key, value := range props {
+	// 			details += fmt.Sprintf("[green]%s[white]: %v\n", key, value)
+	// 		}
+	// 		detailsView.SetText(details)
+	// 	} else {
+	// 		detailsView.SetText("[red]No details available.")
+	// 	}
+	// })
+
+	// Create a layout to arrange the UI components.
+	layout := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(
+			tview.NewFlex().
+				AddItem(tree, 0, 1, true).
+				AddItem(detailsView, 0, 1, false),
+			0, 1, true,
+		)
+
+	// Set up the app and start it.
 	app := tview.NewApplication()
-	if err := app.SetRoot(treeView, true).Run(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return err
+	if err := app.SetRoot(layout, true).Run(); err != nil {
+		panic(err)
 	}
+
+	// // Create the application
+	// app := tview.NewApplication()
+	// if err := app.SetRoot(treeView, true).Run(); err != nil {
+	// 	fmt.Fprintln(os.Stderr, err)
+	// 	return err
+	// }
 
 	return nil
 }
