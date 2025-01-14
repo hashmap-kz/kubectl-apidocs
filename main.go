@@ -202,6 +202,7 @@ func buildTreeView(rootNode *Node) (*tview.TreeNode, *tview.TreeView) {
 	tree.SetBorder(true)
 	tree.SetTitle("Resources")
 	// tree.SetBorderColor(tcell.ColorBlue)
+	// tree.GetRoot().SetExpanded(true)
 
 	return rootTree, tree
 }
@@ -314,6 +315,7 @@ func printTree() error {
 
 	// Create the tree view
 	rootTree, tree := buildTreeView(root)
+	rootTree.SetExpanded(true)
 
 	// Create a TextView to display field details.
 	detailsView := tview.NewTextView()
