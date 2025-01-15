@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 
@@ -33,7 +32,7 @@ func App(root *Node, pathExplainers map[string]Explainer) {
 		sort.Strings(keys)
 
 		for _, key := range keys {
-			childNode := tview.NewTreeNode(children[key].Name).SetReference(key)
+			childNode := tview.NewTreeNode(children[key].Name).SetReference(children[key])
 			parent.AddChild(childNode)
 			if children[key].Children != nil {
 				addChildren(childNode, children[key].Children)
@@ -92,15 +91,15 @@ func App(root *Node, pathExplainers map[string]Explainer) {
 			return
 		}
 
-		path := getNodePath(rootTree, node)
-		path = strings.TrimPrefix(path, "/root.")
-		detailsView.SetText(path)
+		if data, ok := node.GetReference().(*Node); ok {
+			path := data.OriginalPath
+			detailsView.SetText(path)
 
-		if explainer, ok := pathExplainers[path]; ok {
-			buf := bytes.Buffer{}
-			explainer.Explain(&buf, path)
-
-			detailsView.SetText(fmt.Sprintf("%s\n\n%s", path, buf.String()))
+			if explainer, ok := pathExplainers[path]; ok {
+				buf := bytes.Buffer{}
+				explainer.Explain(&buf, path)
+				detailsView.SetText(fmt.Sprintf("%s\n\n%s", path, buf.String()))
+			}
 		}
 	})
 
@@ -149,34 +148,4 @@ func App(root *Node, pathExplainers map[string]Explainer) {
 	if err := app.SetRoot(layout, true).Run(); err != nil {
 		panic(err)
 	}
-}
-
-// Helper function to find the path of a node from root
-func getNodePath(root, target *tview.TreeNode) string {
-	var path []string
-	if findPathRecursive(root, target, &path) {
-		return "/" + joinPath(path)
-	}
-	return "Node not found"
-}
-
-// Recursive function to find the path
-func findPathRecursive(current, target *tview.TreeNode, path *[]string) bool {
-	*path = append(*path, current.GetText())
-	if current == target {
-		return true
-	}
-	for _, child := range current.GetChildren() {
-		if findPathRecursive(child, target, path) {
-			return true
-		}
-	}
-	// Backtrack if target is not found in this branch
-	*path = (*path)[:len(*path)-1]
-	return false
-}
-
-// Helper function to join path components
-func joinPath(path []string) string {
-	return strings.Join(path, ".")
 }
