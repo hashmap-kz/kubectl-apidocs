@@ -177,7 +177,11 @@ func main() {
 			gvr := gv.WithResource(resource.Name)
 
 			// fields+
-			paths := getPaths(restMapper, openApiSchema, gvr)
+			paths, err := getPaths(restMapper, openApiSchema, gvr)
+			if err != nil {
+				log.Fatal(err)
+			}
+
 			rootFieldsNode := &Node{Name: "root"}
 			for _, fieldPath := range paths {
 				rootFieldsNode.AddPath(fieldPath)
@@ -343,35 +347,37 @@ func addChildrenFields(parent *tview.TreeNode, children map[string]*Node, gvr *s
 func getPaths(restMapper meta.RESTMapper,
 	openApiSchema openapi.Resources,
 	gvr schema.GroupVersionResource,
-) []string {
+) ([]string, error) {
 	visitor := &schemaVisitor{
-		pathSchema: make(map[string]proto.Schema),
-		prevPath:   strings.ToLower(gvr.Resource),
-		err:        nil,
+		pathSchema:        make(map[string]proto.Schema),
+		prevPath:          strings.ToLower(gvr.Resource),
+		err:               nil,
+		visitedReferences: make(map[string]struct{}),
 	}
 	gvk, err := restMapper.KindFor(gvr)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	s := openApiSchema.LookupResource(gvk)
 	if s == nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	s.Accept(visitor)
 	if visitor.err != nil {
-		log.Fatal(visitor.err)
+		return nil, err
 	}
 	visitorPathsResult := visitor.listPaths()
-	return visitorPathsResult
+	return visitorPathsResult, nil
 }
 
 //////////////////////////////////////////////////////////////////////
 // schema visitor
 
 type schemaVisitor struct {
-	prevPath   string
-	pathSchema map[string]proto.Schema
-	err        error
+	prevPath          string
+	pathSchema        map[string]proto.Schema
+	err               error
+	visitedReferences map[string]struct{}
 }
 
 var _ proto.SchemaVisitor = (*schemaVisitor)(nil)
@@ -394,15 +400,13 @@ func (v *schemaVisitor) VisitKind(k *proto.Kind) {
 	}
 }
 
-var visitedReferences = map[string]struct{}{}
-
 func (v *schemaVisitor) VisitReference(r proto.Reference) {
-	if _, ok := visitedReferences[r.Reference()]; ok {
+	if _, ok := v.visitedReferences[r.Reference()]; ok {
 		return
 	}
-	visitedReferences[r.Reference()] = struct{}{}
+	v.visitedReferences[r.Reference()] = struct{}{}
 	r.SubSchema().Accept(v)
-	delete(visitedReferences, r.Reference())
+	delete(v.visitedReferences, r.Reference())
 }
 
 func (*schemaVisitor) VisitPrimitive(*proto.Primitive) {
