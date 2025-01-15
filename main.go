@@ -282,7 +282,7 @@ func main() {
 		}
 		data := getReference(node)
 		detailsView.SetText(data.originalPath)
-		if data.nodeType == nodeTypeField {
+		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
 			if explainer, ok := pathExplainers[data.originalPath]; ok {
 				buf := bytes.Buffer{}
 				explainer.Explain(&buf, data.originalPath)
@@ -358,12 +358,18 @@ func getPaths(restMapper meta.RESTMapper,
 	if visitor.err != nil {
 		log.Fatal(visitor.err)
 	}
-	for _, p := range visitor.listPaths() {
+	visitorPathsResult := visitor.listPaths()
+	for _, p := range visitorPathsResult {
 		pathExplainers[p.original] = Explainer{
 			gvr:             gvr,
 			openAPIV3Client: openapiclient,
 		}
 		paths = append(paths, p)
+	}
+	// resource itself
+	pathExplainers[gvr.Resource] = Explainer{
+		gvr:             gvr,
+		openAPIV3Client: openapiclient,
 	}
 	return paths
 }
