@@ -34,7 +34,7 @@ func setInPreview(node *tview.TreeNode, inPreview bool) {
 		data.inPreview = inPreview
 		node.SetReference(data)
 	} else {
-		log.Fatal("unexpected. get-ref failed: %v", node)
+		log.Fatalf("unexpected. get-ref failed: %v", node)
 	}
 }
 
