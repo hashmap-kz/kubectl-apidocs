@@ -154,7 +154,8 @@ func main() {
 	for _, group := range resources {
 		// Create a tree node for the API group
 		groupNode := tview.NewTreeNode(group.GroupVersion).
-			SetColor(tcell.ColorGreen).SetReference(&TreeData{nodeType: nodeTypeGroup})
+			SetColor(tcell.ColorGreen).
+			SetReference(&TreeData{nodeType: nodeTypeGroup})
 
 		// groupNode.SetExpanded(false)
 
@@ -310,6 +311,7 @@ func main() {
 
 func addChildrenFields(parent *tview.TreeNode, children map[string]*Node) {
 	if len(children) != 0 {
+		parent.SetText(parent.GetText() + " ⯈")
 		parent.SetColor(tcell.ColorGreen)
 		parent.SetExpanded(!parent.IsExpanded())
 	}
