@@ -150,15 +150,26 @@ func main() {
 	treeView := tview.NewTreeView().
 		SetRoot(root).
 		SetCurrentNode(root).
-		SetGraphicsColor(tcell.ColorWhite) // Set tree view graphics color
+		SetGraphicsColor(tcell.ColorWhite)
+
+	treeView.SetTitle("Resources")
+	treeView.SetBorder(true)
 
 	// Create a TextView to display field details.
 	detailsView := tview.NewTextView()
 	detailsView.SetDynamicColors(true)
 	detailsView.SetBorder(true)
-	detailsView.SetTitle("Field Details")
+	detailsView.SetTitle("Details")
 	detailsView.SetScrollable(true)
 	detailsView.SetWrap(true)
+
+	detailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			app.SetFocus(treeView) // Switch focus to the TreeView
+			return nil
+		}
+		return event
+	})
 
 	// Stack to handle navigation back
 	var stack []*tview.TreeNode
