@@ -14,13 +14,32 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+type TreeDataNodeType string
+
+var (
+	nodeTypeGroup    TreeDataNodeType = "group"
+	nodeTypeResource TreeDataNodeType = "resource"
+)
+
 type TreeData struct {
-	gvr schema.GroupVersionResource
+	nodeType TreeDataNodeType
+	gvr      schema.GroupVersionResource
+	// it means, that node is already opened in sub-view
+	// do not add it to a stack view again and again
+	inPreview bool
+}
+
+func setInPreview(node *tview.TreeNode, inPreview bool) {
+	if data, ok := node.GetReference().(*TreeData); ok {
+		data.inPreview = inPreview
+		node.SetReference(data)
+	} else {
+		log.Fatal("unexpected. get-ref failed: %v", node)
+	}
 }
 
 // Custom sort function to prioritize apps/v1 and v1 at the top
 func customSortGroups(groups []*metav1.APIResourceList) {
-
 	// Prioritize these groups at the top
 	topLevels := []string{
 		"apps/v1",
@@ -33,7 +52,6 @@ func customSortGroups(groups []*metav1.APIResourceList) {
 	}
 
 	sort.SliceStable(groups, func(i, j int) bool {
-
 		for _, t := range topLevels {
 			if groups[i].GroupVersion == t {
 				return true
@@ -85,7 +103,7 @@ func main() {
 	for _, group := range resources {
 		// Create a tree node for the API group
 		groupNode := tview.NewTreeNode(group.GroupVersion).
-			SetColor(tcell.ColorGreen) // Set API group node color using tcell
+			SetColor(tcell.ColorGreen).SetReference(&TreeData{nodeType: nodeTypeGroup})
 
 		// groupNode.SetExpanded(false)
 
@@ -107,7 +125,8 @@ func main() {
 			}
 			gvr := gv.WithResource(resource.Name)
 			data := &TreeData{
-				gvr: gvr,
+				nodeType: nodeTypeResource,
+				gvr:      gvr,
 			}
 
 			resourceNode := tview.NewTreeNode(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name)).
@@ -145,16 +164,22 @@ func main() {
 		}
 
 		// open subview with a subtree
-		if len(node.GetChildren()) > 0 {
-			stack = append(stack, node)
+		if data, ok := node.GetReference().(*TreeData); ok {
+			if data.nodeType == nodeTypeGroup && !data.inPreview {
+				setInPreview(node, true)
 
-			treeView.SetRoot(node).
-				SetCurrentNode(node)
+				stack = append(stack, node)
 
-			node.SetExpanded(true)
+				treeView.SetRoot(node).
+					SetCurrentNode(node)
+
+				node.SetExpanded(true)
+			} else {
+				// just expand subtree
+				node.SetExpanded(!node.IsExpanded())
+			}
 		} else {
-			// just expand subtree
-			node.SetExpanded(!node.IsExpanded())
+			log.Fatal("unexpected. get-reference.")
 		}
 	})
 
@@ -167,7 +192,10 @@ func main() {
 
 		// back to the root (step back) by ESC
 		if event.Key() == tcell.KeyEscape && len(stack) > 1 {
+			// a node, that was used for preview, we need to clear the flag
 			cur := stack[len(stack)-1]
+			setInPreview(cur, false)
+
 			stack = stack[:len(stack)-1]
 			prevNode := stack[len(stack)-1]
 			treeView.SetRoot(prevNode).
