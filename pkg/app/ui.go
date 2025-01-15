@@ -115,10 +115,11 @@ func App(root *Node, pathExplainers map[string]Explainer) {
 
 		// back to the root (step back) by ESC
 		if event.Key() == tcell.KeyEscape && len(stack) > 1 {
+			cur := stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
 			prevNode := stack[len(stack)-1]
 			tree.SetRoot(prevNode).
-				SetCurrentNode(prevNode)
+				SetCurrentNode(cur)
 			return nil
 		}
 
