@@ -43,6 +43,8 @@ type TreeData struct {
 	inPreview bool
 
 	originalPath string
+
+	gvr *schema.GroupVersionResource
 }
 
 // TODO: cleanup
@@ -148,8 +150,6 @@ func main() {
 	// Sort the API groups with custom logic to prioritize apps/v1 and v1 at the top
 	customSortGroups(resources)
 
-	pathExplainers := make(map[string]Explainer)
-
 	// Build the tree with API groups and resources
 	for _, group := range resources {
 		// Create a tree node for the API group
@@ -177,17 +177,18 @@ func main() {
 			gvr := gv.WithResource(resource.Name)
 
 			// fields+
-			paths := getPaths(restMapper, openApiSchema, openAPIV3Client, gvr, pathExplainers)
+			paths := getPaths(restMapper, openApiSchema, gvr)
 			rootFieldsNode := &Node{Name: "root"}
 			for _, line := range paths {
 				rootFieldsNode.AddPath(line.original)
 			}
 			tmpNode := tview.NewTreeNode("tmp")
-			addChildrenFields(tmpNode, rootFieldsNode.Children)
+			addChildrenFields(tmpNode, rootFieldsNode.Children, &gvr)
 			firstChild := tmpNode.GetChildren()[0]
 			firstChild.SetText(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name))
 			if data, ok := firstChild.GetReference().(*TreeData); ok {
 				data.nodeType = nodeTypeResource
+				data.gvr = &gvr
 				firstChild.SetReference(data)
 			}
 			// fields-
@@ -284,11 +285,15 @@ func main() {
 		data := getReference(node)
 		detailsView.SetText(data.originalPath)
 		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
-			if explainer, ok := pathExplainers[data.originalPath]; ok {
-				buf := bytes.Buffer{}
-				explainer.Explain(&buf, data.originalPath)
-				detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.originalPath, buf.String()))
+			explainer := Explainer{
+				gvr:             *data.gvr,
+				openAPIV3Client: openAPIV3Client,
 			}
+
+			buf := bytes.Buffer{}
+			explainer.Explain(&buf, data.originalPath)
+			detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.originalPath, buf.String()))
+
 		}
 	})
 
@@ -309,7 +314,7 @@ func main() {
 	}
 }
 
-func addChildrenFields(parent *tview.TreeNode, children map[string]*Node) {
+func addChildrenFields(parent *tview.TreeNode, children map[string]*Node, gvr *schema.GroupVersionResource) {
 	if len(children) != 0 {
 		parent.SetText(parent.GetText() + " ⯈")
 		parent.SetColor(tcell.ColorGreen)
@@ -326,21 +331,19 @@ func addChildrenFields(parent *tview.TreeNode, children map[string]*Node) {
 		childNode := tview.NewTreeNode(children[key].Name).SetReference(&TreeData{
 			nodeType:     nodeTypeField,
 			originalPath: children[key].OriginalPath,
+			gvr:          gvr,
 		})
 		parent.AddChild(childNode)
 		if children[key].Children != nil {
-			addChildrenFields(childNode, children[key].Children)
+			addChildrenFields(childNode, children[key].Children, gvr)
 		}
 	}
 }
 
 func getPaths(restMapper meta.RESTMapper,
 	openApiSchema openapi.Resources,
-	openapiclient openapiclient.Client,
 	gvr schema.GroupVersionResource,
-	pathExplainers map[string]Explainer,
 ) []path {
-	var paths []path
 	visitor := &schemaVisitor{
 		pathSchema: make(map[path]proto.Schema),
 		prevPath: path{
@@ -361,19 +364,7 @@ func getPaths(restMapper meta.RESTMapper,
 		log.Fatal(visitor.err)
 	}
 	visitorPathsResult := visitor.listPaths()
-	for _, p := range visitorPathsResult {
-		pathExplainers[p.original] = Explainer{
-			gvr:             gvr,
-			openAPIV3Client: openapiclient,
-		}
-		paths = append(paths, p)
-	}
-	// resource itself
-	pathExplainers[gvr.Resource] = Explainer{
-		gvr:             gvr,
-		openAPIV3Client: openapiclient,
-	}
-	return paths
+	return visitorPathsResult
 }
 
 //////////////////////////////////////////////////////////////////////
