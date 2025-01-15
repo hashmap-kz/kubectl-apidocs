@@ -15,10 +15,8 @@ import (
 // explainer
 
 type Explainer struct {
-	gvr                 schema.GroupVersionResource
-	openAPIV3Client     openapiclient.Client
-	enablePrintPath     bool
-	enablePrintBrackets bool
+	gvr             schema.GroupVersionResource
+	openAPIV3Client openapiclient.Client
 }
 
 func (e Explainer) Explain(w io.Writer, path string) error {

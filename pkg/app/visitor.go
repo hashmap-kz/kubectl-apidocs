@@ -12,12 +12,7 @@ import (
 // schema visitor
 
 type path struct {
-	original     string
-	withBrackets string
-}
-
-func (p path) isEmpty() bool {
-	return p.original == "" && p.withBrackets == ""
+	original string
 }
 
 type schemaVisitor struct {
@@ -33,8 +28,7 @@ func (v *schemaVisitor) VisitKind(k *proto.Kind) {
 	paths := make([]path, len(keys))
 	for i, key := range keys {
 		paths[i] = path{
-			original:     strings.Join([]string{v.prevPath.original, key}, "."),
-			withBrackets: strings.Join([]string{v.prevPath.withBrackets, key}, "."),
+			original: strings.Join([]string{v.prevPath.original, key}, "."),
 		}
 	}
 	for i, key := range keys {
@@ -43,9 +37,9 @@ func (v *schemaVisitor) VisitKind(k *proto.Kind) {
 			v.err = err
 			return
 		}
-		if _, ok := schema.(*proto.Array); ok {
-			paths[i].withBrackets += "[]"
-		}
+		// if _, ok := schema.(*proto.Array); ok {
+		// 	// TODO: types for print on UI?
+		// }
 		v.pathSchema[paths[i]] = schema
 		v.prevPath = paths[i]
 		schema.Accept(v)
@@ -75,12 +69,10 @@ func (v *schemaVisitor) VisitMap(m *proto.Map) {
 	m.SubType.Accept(v)
 }
 
-func (v *schemaVisitor) listPaths(filter func(path) bool) []path {
+func (v *schemaVisitor) listPaths() []path {
 	paths := make([]path, 0, len(v.pathSchema))
 	for path := range v.pathSchema {
-		if filter(path) {
-			paths = append(paths, path)
-		}
+		paths = append(paths, path)
 	}
 	sort.SliceStable(paths, func(i, j int) bool {
 		return paths[i].original < paths[j].original

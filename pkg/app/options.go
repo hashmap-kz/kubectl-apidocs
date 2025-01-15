@@ -3,7 +3,6 @@ package app
 import (
 	"fmt"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -21,15 +20,7 @@ import (
 )
 
 type Options struct {
-	// User input
-	apiVersion       string
-	inputFieldPath   string
-	disablePrintPath bool
-	showBrackets     bool
-
-	// After completion
-	inputFieldPathRegex *regexp.Regexp
-	gvrs                []schema.GroupVersionResource
+	gvrs []schema.GroupVersionResource
 
 	// Dependencies
 	genericclioptions.IOStreams
@@ -81,7 +72,6 @@ func (o *Options) Run() error {
 
 	for _, gvrsItem := range gvrs {
 		if gvar, ok := gvarMap[gvrsItem.Resource]; ok {
-			o.inputFieldPathRegex = regexp.MustCompile(".*")
 			o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
 		}
 	}
@@ -105,8 +95,7 @@ func (o *Options) Run() error {
 		visitor := &schemaVisitor{
 			pathSchema: make(map[path]proto.Schema),
 			prevPath: path{
-				original:     strings.ToLower(gvr.Resource),
-				withBrackets: strings.ToLower(gvr.Resource),
+				original: strings.ToLower(gvr.Resource),
 			},
 			err: nil,
 		}
@@ -122,15 +111,10 @@ func (o *Options) Run() error {
 		if visitor.err != nil {
 			return visitor.err
 		}
-		filteredPaths := visitor.listPaths(func(s path) bool {
-			return o.inputFieldPathRegex.MatchString(s.original)
-		})
-		for _, p := range filteredPaths {
+		for _, p := range visitor.listPaths() {
 			pathExplainers[p.original] = Explainer{
-				gvr:                 gvr,
-				openAPIV3Client:     o.cachedOpenAPIV3Client,
-				enablePrintPath:     !o.disablePrintPath,
-				enablePrintBrackets: o.showBrackets,
+				gvr:             gvr,
+				openAPIV3Client: o.cachedOpenAPIV3Client,
 			}
 			paths = append(paths, p)
 		}
