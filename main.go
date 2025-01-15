@@ -179,8 +179,8 @@ func main() {
 			// fields+
 			paths := getPaths(restMapper, openApiSchema, gvr)
 			rootFieldsNode := &Node{Name: "root"}
-			for _, line := range paths {
-				rootFieldsNode.AddPath(line.original)
+			for _, fieldPath := range paths {
+				rootFieldsNode.AddPath(fieldPath)
 			}
 			tmpNode := tview.NewTreeNode("tmp")
 			addChildrenFields(tmpNode, rootFieldsNode.Children, &gvr)
@@ -343,13 +343,11 @@ func addChildrenFields(parent *tview.TreeNode, children map[string]*Node, gvr *s
 func getPaths(restMapper meta.RESTMapper,
 	openApiSchema openapi.Resources,
 	gvr schema.GroupVersionResource,
-) []path {
+) []string {
 	visitor := &schemaVisitor{
-		pathSchema: make(map[path]proto.Schema),
-		prevPath: path{
-			original: strings.ToLower(gvr.Resource),
-		},
-		err: nil,
+		pathSchema: make(map[string]proto.Schema),
+		prevPath:   strings.ToLower(gvr.Resource),
+		err:        nil,
 	}
 	gvk, err := restMapper.KindFor(gvr)
 	if err != nil {
@@ -370,13 +368,9 @@ func getPaths(restMapper meta.RESTMapper,
 //////////////////////////////////////////////////////////////////////
 // schema visitor
 
-type path struct {
-	original string
-}
-
 type schemaVisitor struct {
-	prevPath   path
-	pathSchema map[path]proto.Schema
+	prevPath   string
+	pathSchema map[string]proto.Schema
 	err        error
 }
 
@@ -384,11 +378,9 @@ var _ proto.SchemaVisitor = (*schemaVisitor)(nil)
 
 func (v *schemaVisitor) VisitKind(k *proto.Kind) {
 	keys := k.Keys()
-	paths := make([]path, len(keys))
+	paths := make([]string, len(keys))
 	for i, key := range keys {
-		paths[i] = path{
-			original: strings.Join([]string{v.prevPath.original, key}, "."),
-		}
+		paths[i] = strings.Join([]string{v.prevPath, key}, ".")
 	}
 	for i, key := range keys {
 		schema, err := explain.LookupSchemaForField(k, []string{key})
@@ -396,9 +388,6 @@ func (v *schemaVisitor) VisitKind(k *proto.Kind) {
 			v.err = err
 			return
 		}
-		// if _, ok := schema.(*proto.Array); ok {
-		// 	// TODO: types for print on UI?
-		// }
 		v.pathSchema[paths[i]] = schema
 		v.prevPath = paths[i]
 		schema.Accept(v)
@@ -428,13 +417,13 @@ func (v *schemaVisitor) VisitMap(m *proto.Map) {
 	m.SubType.Accept(v)
 }
 
-func (v *schemaVisitor) listPaths() []path {
-	paths := make([]path, 0, len(v.pathSchema))
+func (v *schemaVisitor) listPaths() []string {
+	paths := make([]string, 0, len(v.pathSchema))
 	for path := range v.pathSchema {
 		paths = append(paths, path)
 	}
 	sort.SliceStable(paths, func(i, j int) bool {
-		return paths[i].original < paths[j].original
+		return paths[i] < paths[j]
 	})
 	return paths
 }
