@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,113 +39,65 @@ type Options struct {
 	cachedOpenAPIV3Client openapiclient.Client
 }
 
-type groupVersionAPIResource struct {
-	schema.GroupVersionResource
-	metav1.APIResource
-}
-
-func (o *Options) discover() (map[string]*groupVersionAPIResource, []schema.GroupVersionResource, error) {
-	lists, err := o.discovery.ServerPreferredResources()
-	if err != nil {
-		return nil, nil, err
-	}
-	var gvrs []schema.GroupVersionResource
-	m := make(map[string]*groupVersionAPIResource)
-	for _, list := range lists {
-		if len(list.APIResources) == 0 {
-			continue
-		}
-		gv, err := schema.ParseGroupVersion(list.GroupVersion)
-		if err != nil {
-			continue
-		}
-		for _, resource := range list.APIResources {
-			gvr := gv.WithResource(resource.Name)
-			gvrs = append(gvrs, gvr)
-			r := groupVersionAPIResource{
-				GroupVersionResource: gvr,
-				APIResource:          resource,
-			}
-			m[resource.Name] = &r
-			m[resource.Kind] = &r
-			m[resource.SingularName] = &r
-			for _, shortName := range resource.ShortNames {
-				m[shortName] = &r
-			}
-		}
-	}
-	sort.SliceStable(gvrs, func(i, j int) bool {
-		return gvrs[i].String() < gvrs[j].String()
-	})
-	return m, gvrs, nil
-}
-
 func NewOptions(streams genericclioptions.IOStreams) *Options {
 	return &Options{
 		IOStreams: streams,
 	}
 }
 
-func PrintTree() error {
+func NewCmd() *cobra.Command {
 	o := NewOptions(genericclioptions.IOStreams{
 		In:     os.Stdin,
 		Out:    os.Stdout,
 		ErrOut: os.Stderr,
 	})
 
+	cmd := &cobra.Command{
+		Use:   "kubectl apidocs",
+		Short: "API resources explained in a tree view format.",
+		Example: `
+kubectl apidocs
+`,
+	}
 	kubeConfigFlags := defaultConfigFlags().WithWarningPrinter(o.IOStreams)
+	flags := cmd.PersistentFlags()
+	kubeConfigFlags.AddFlags(flags)
 	matchVersionKubeConfigFlags := cmdutil.NewMatchVersionFlags(kubeConfigFlags)
+	matchVersionKubeConfigFlags.AddFlags(flags)
 	f := cmdutil.NewFactory(matchVersionKubeConfigFlags)
 
-	discovery, err := f.ToDiscoveryClient()
-	if err != nil {
-		return err
+	cmd.Run = func(_ *cobra.Command, args []string) {
+		cmdutil.CheckErr(o.Complete(f, args))
+		cmdutil.CheckErr(o.Run())
 	}
-	o.discovery = discovery
+	return cmd
+}
 
-	o.mapper, err = f.ToRESTMapper()
-	if err != nil {
-		return err
-	}
-	o.schema, err = f.OpenAPISchema()
+func (o *Options) Run() error {
+	gvarMap, gvrs, err := o.discover()
 	if err != nil {
 		return err
 	}
 
-	// TODO: cached
-	c, err := f.OpenAPIV3Client()
-	if err != nil {
-		return err
+	for _, gvrsItem := range gvrs {
+		if gvar, ok := gvarMap[gvrsItem.Resource]; ok {
+			o.inputFieldPathRegex = regexp.MustCompile(".*")
+			o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
+		}
 	}
-	o.cachedOpenAPIV3Client = c
 
-	gvarMap, _, err := o.discover()
-	if err != nil {
-		return err
-	}
-	// fmt.Println(gvarMap, gvrs)
-
-	/////// tests ///////
-
-	// for _, gvrsItem := range gvrs {
-	// 	if gvar, ok := gvarMap[gvrsItem.Resource]; ok {
-	// 		o.inputFieldPathRegex = regexp.MustCompile(".*")
-	// 		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
-	// 	}
+	// if gvar, ok := gvarMap["statefulsets"]; ok {
+	// 	o.inputFieldPathRegex = regexp.MustCompile(".*")
+	// 	o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
 	// }
-
-	if gvar, ok := gvarMap["statefulsets"]; ok {
-		o.inputFieldPathRegex = regexp.MustCompile(".*")
-		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
-	}
-	if gvar, ok := gvarMap["httproutes"]; ok {
-		o.inputFieldPathRegex = regexp.MustCompile(".*")
-		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
-	}
-	if gvar, ok := gvarMap["gateways"]; ok {
-		o.inputFieldPathRegex = regexp.MustCompile(".*")
-		o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
-	}
+	// if gvar, ok := gvarMap["httproutes"]; ok {
+	// 	o.inputFieldPathRegex = regexp.MustCompile(".*")
+	// 	o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
+	// }
+	// if gvar, ok := gvarMap["gateways"]; ok {
+	// 	o.inputFieldPathRegex = regexp.MustCompile(".*")
+	// 	o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
+	// }
 
 	pathExplainers := make(map[string]Explainer)
 	var paths []path
@@ -191,7 +144,32 @@ func PrintTree() error {
 		root.AddPath(line.original)
 	}
 
+	// UI
 	App(root, pathExplainers)
+	return nil
+}
+
+func (o *Options) Complete(f cmdutil.Factory, args []string) error {
+	discovery, err := f.ToDiscoveryClient()
+	if err != nil {
+		return err
+	}
+	o.discovery = discovery
+
+	o.mapper, err = f.ToRESTMapper()
+	if err != nil {
+		return err
+	}
+	o.schema, err = f.OpenAPISchema()
+	if err != nil {
+		return err
+	}
+
+	// TODO: cached
+	o.cachedOpenAPIV3Client, err = f.OpenAPIV3Client()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -199,4 +177,45 @@ func PrintTree() error {
 // Copy from https://github.com/kubernetes/kubectl/blob/4f380d07c5e5bb41a037a72c4b35c7f828ba2d59/pkg/cmd/cmd.go#L95-L97
 func defaultConfigFlags() *genericclioptions.ConfigFlags {
 	return genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(300).WithDiscoveryQPS(50.0)
+}
+
+type groupVersionAPIResource struct {
+	schema.GroupVersionResource
+	metav1.APIResource
+}
+
+func (o *Options) discover() (map[string]*groupVersionAPIResource, []schema.GroupVersionResource, error) {
+	lists, err := o.discovery.ServerPreferredResources()
+	if err != nil {
+		return nil, nil, err
+	}
+	var gvrs []schema.GroupVersionResource
+	m := make(map[string]*groupVersionAPIResource)
+	for _, list := range lists {
+		if len(list.APIResources) == 0 {
+			continue
+		}
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			continue
+		}
+		for _, resource := range list.APIResources {
+			gvr := gv.WithResource(resource.Name)
+			gvrs = append(gvrs, gvr)
+			r := groupVersionAPIResource{
+				GroupVersionResource: gvr,
+				APIResource:          resource,
+			}
+			m[resource.Name] = &r
+			m[resource.Kind] = &r
+			m[resource.SingularName] = &r
+			for _, shortName := range resource.ShortNames {
+				m[shortName] = &r
+			}
+		}
+	}
+	sort.SliceStable(gvrs, func(i, j int) bool {
+		return gvrs[i].String() < gvrs[j].String()
+	})
+	return m, gvrs, nil
 }
