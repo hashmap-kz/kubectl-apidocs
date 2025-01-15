@@ -8,7 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/discovery"
@@ -65,29 +64,12 @@ kubectl apidocs
 }
 
 func (o *Options) Run() error {
-	gvarMap, gvrs, err := o.discover()
+	var err error
+
+	o.gvrs, err = o.discover()
 	if err != nil {
 		return err
 	}
-
-	for _, gvrsItem := range gvrs {
-		if gvar, ok := gvarMap[gvrsItem.Resource]; ok {
-			o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
-		}
-	}
-
-	// if gvar, ok := gvarMap["statefulsets"]; ok {
-	// 	o.inputFieldPathRegex = regexp.MustCompile(".*")
-	// 	o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
-	// }
-	// if gvar, ok := gvarMap["httproutes"]; ok {
-	// 	o.inputFieldPathRegex = regexp.MustCompile(".*")
-	// 	o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
-	// }
-	// if gvar, ok := gvarMap["gateways"]; ok {
-	// 	o.inputFieldPathRegex = regexp.MustCompile(".*")
-	// 	o.gvrs = append(o.gvrs, gvar.GroupVersionResource)
-	// }
 
 	pathExplainers := make(map[string]Explainer)
 	var paths []path
@@ -163,18 +145,13 @@ func defaultConfigFlags() *genericclioptions.ConfigFlags {
 	return genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(300).WithDiscoveryQPS(50.0)
 }
 
-type groupVersionAPIResource struct {
-	schema.GroupVersionResource
-	metav1.APIResource
-}
-
-func (o *Options) discover() (map[string]*groupVersionAPIResource, []schema.GroupVersionResource, error) {
+func (o *Options) discover() ([]schema.GroupVersionResource, error) {
 	lists, err := o.discovery.ServerPreferredResources()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
+
 	var gvrs []schema.GroupVersionResource
-	m := make(map[string]*groupVersionAPIResource)
 	for _, list := range lists {
 		if len(list.APIResources) == 0 {
 			continue
@@ -186,20 +163,11 @@ func (o *Options) discover() (map[string]*groupVersionAPIResource, []schema.Grou
 		for _, resource := range list.APIResources {
 			gvr := gv.WithResource(resource.Name)
 			gvrs = append(gvrs, gvr)
-			r := groupVersionAPIResource{
-				GroupVersionResource: gvr,
-				APIResource:          resource,
-			}
-			m[resource.Name] = &r
-			m[resource.Kind] = &r
-			m[resource.SingularName] = &r
-			for _, shortName := range resource.ShortNames {
-				m[shortName] = &r
-			}
 		}
 	}
 	sort.SliceStable(gvrs, func(i, j int) bool {
 		return gvrs[i].String() < gvrs[j].String()
 	})
-	return m, gvrs, nil
+
+	return gvrs, nil
 }
