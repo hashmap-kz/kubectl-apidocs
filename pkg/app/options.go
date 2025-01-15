@@ -188,10 +188,8 @@ func PrintTree() error {
 
 	// Add each path to the tree
 	for _, line := range paths {
-		path := strings.Split(line.original, ".")
-		root.AddPath(path)
+		root.AddPath(line.original)
 	}
-	root.SortChildren()
 
 	App(root, pathExplainers)
 
