@@ -185,6 +185,10 @@ func main() {
 			addChildrenFields(tmpNode, rootFieldsNode.Children)
 			firstChild := tmpNode.GetChildren()[0]
 			firstChild.SetText(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name))
+			if data, ok := firstChild.GetReference().(*TreeData); ok {
+				data.nodeType = nodeTypeResource
+				firstChild.SetReference(data)
+			}
 			// fields-
 
 			groupNode.AddChild(firstChild)
@@ -232,7 +236,7 @@ func main() {
 		// open subview with a subtree
 		data := getReference(node)
 
-		if data.nodeType == nodeTypeGroup && !data.inPreview {
+		if (data.nodeType == nodeTypeGroup || data.nodeType == nodeTypeResource) && !data.inPreview {
 			setInPreview(node, true)
 
 			stack = append(stack, node)
