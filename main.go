@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sort"
@@ -19,7 +21,9 @@ import (
 	"k8s.io/kubectl/pkg/explain"
 	"k8s.io/kubectl/pkg/util/openapi"
 
+	openapiclient "k8s.io/client-go/openapi"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
+	explainv2 "k8s.io/kubectl/pkg/explain/v2"
 )
 
 type TreeDataNodeType string
@@ -122,6 +126,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	openAPIV3Client, err := f.OpenAPIV3Client()
+	if err != nil {
+		log.Fatal(err)
+	}
 	// flags-
 
 	// Get API resources
@@ -139,6 +147,8 @@ func main() {
 
 	// Sort the API groups with custom logic to prioritize apps/v1 and v1 at the top
 	customSortGroups(resources)
+
+	pathExplainers := make(map[string]Explainer)
 
 	// Build the tree with API groups and resources
 	for _, group := range resources {
@@ -166,7 +176,7 @@ func main() {
 			gvr := gv.WithResource(resource.Name)
 
 			// fields+
-			paths := getPaths(restMapper, openApiSchema, gvr)
+			paths := getPaths(restMapper, openApiSchema, openAPIV3Client, gvr, pathExplainers)
 			rootFieldsNode := &Node{Name: "root"}
 			for _, line := range paths {
 				rootFieldsNode.AddPath(line.original)
@@ -267,7 +277,14 @@ func main() {
 			return
 		}
 		data := getReference(node)
-		detailsView.SetText(fmt.Sprintf("%v", data))
+		detailsView.SetText(data.originalPath)
+		if data.nodeType == nodeTypeField {
+			if explainer, ok := pathExplainers[data.originalPath]; ok {
+				buf := bytes.Buffer{}
+				explainer.Explain(&buf, data.originalPath)
+				detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.originalPath, buf.String()))
+			}
+		}
 	})
 
 	// Create a layout to arrange the UI components.
@@ -311,7 +328,12 @@ func addChildrenFields(parent *tview.TreeNode, children map[string]*Node) {
 	}
 }
 
-func getPaths(restMapper meta.RESTMapper, openApiSchema openapi.Resources, gvr schema.GroupVersionResource) []path {
+func getPaths(restMapper meta.RESTMapper,
+	openApiSchema openapi.Resources,
+	openapiclient openapiclient.Client,
+	gvr schema.GroupVersionResource,
+	pathExplainers map[string]Explainer,
+) []path {
 	var paths []path
 	visitor := &schemaVisitor{
 		pathSchema: make(map[path]proto.Schema),
@@ -333,6 +355,10 @@ func getPaths(restMapper meta.RESTMapper, openApiSchema openapi.Resources, gvr s
 		log.Fatal(visitor.err)
 	}
 	for _, p := range visitor.listPaths() {
+		pathExplainers[p.original] = Explainer{
+			gvr:             gvr,
+			openAPIV3Client: openapiclient,
+		}
 		paths = append(paths, p)
 	}
 	return paths
@@ -444,4 +470,32 @@ func (node *Node) AddPath(path string) {
 			current.OriginalPath = strings.Join(parts[:i+1], ".")
 		}
 	}
+}
+
+//////////////////////////////////////////////////////////////////////
+// explainer
+
+type Explainer struct {
+	gvr             schema.GroupVersionResource
+	openAPIV3Client openapiclient.Client
+}
+
+func (e Explainer) Explain(w io.Writer, path string) error {
+	if len(path) == 0 {
+		return fmt.Errorf("path must not be empty: %#v", path)
+	}
+	fields := strings.Split(path, ".")
+	if len(fields) > 0 {
+		// Remove resource name
+		fields = fields[1:]
+	}
+
+	return explainv2.PrintModelDescription(
+		fields,
+		w,
+		e.openAPIV3Client,
+		e.gvr,
+		false,
+		"plaintext",
+	)
 }
