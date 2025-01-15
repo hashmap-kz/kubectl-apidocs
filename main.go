@@ -17,6 +17,7 @@ import (
 type TreeDataNodeType string
 
 var (
+	nodeTypeRoot     TreeDataNodeType = "root"
 	nodeTypeGroup    TreeDataNodeType = "group"
 	nodeTypeResource TreeDataNodeType = "resource"
 )
@@ -29,13 +30,19 @@ type TreeData struct {
 	inPreview bool
 }
 
-func setInPreview(node *tview.TreeNode, inPreview bool) {
+// TODO: cleanup
+func getReference(node *tview.TreeNode) *TreeData {
 	if data, ok := node.GetReference().(*TreeData); ok {
-		data.inPreview = inPreview
-		node.SetReference(data)
-	} else {
-		log.Fatalf("unexpected. get-ref failed: %v", node)
+		return data
 	}
+	log.Fatalf("unexpected. get-ref failed: %v", node)
+	return nil
+}
+
+func setInPreview(node *tview.TreeNode, inPreview bool) {
+	data := getReference(node)
+	data.inPreview = inPreview
+	node.SetReference(data)
 }
 
 // Custom sort function to prioritize apps/v1 and v1 at the top
@@ -94,7 +101,7 @@ func main() {
 
 	// Create the root tree node
 	root := tview.NewTreeNode("API Resources").
-		SetColor(tcell.ColorYellow) // Set root node color using tcell
+		SetColor(tcell.ColorYellow).SetReference(&TreeData{nodeType: nodeTypeRoot})
 
 	// Sort the API groups with custom logic to prioritize apps/v1 and v1 at the top
 	customSortGroups(resources)
@@ -164,22 +171,21 @@ func main() {
 		}
 
 		// open subview with a subtree
-		if data, ok := node.GetReference().(*TreeData); ok {
-			if data.nodeType == nodeTypeGroup && !data.inPreview {
-				setInPreview(node, true)
+		data := getReference(node)
 
-				stack = append(stack, node)
+		if data.nodeType == nodeTypeGroup && !data.inPreview {
+			setInPreview(node, true)
 
-				treeView.SetRoot(node).
-					SetCurrentNode(node)
+			stack = append(stack, node)
 
-				node.SetExpanded(true)
-			} else {
-				// just expand subtree
-				node.SetExpanded(!node.IsExpanded())
-			}
+			treeView.SetRoot(node).
+				SetCurrentNode(node)
+
+			node.SetExpanded(true)
+
 		} else {
-			log.Fatal("unexpected. get-reference.")
+			// just expand subtree
+			node.SetExpanded(!node.IsExpanded())
 		}
 	})
 
@@ -211,10 +217,8 @@ func main() {
 		if node == nil {
 			return
 		}
-
-		if data, ok := node.GetReference().(*TreeData); ok {
-			detailsView.SetText(fmt.Sprintf("%v", data))
-		}
+		data := getReference(node)
+		detailsView.SetText(fmt.Sprintf("%v", data))
 	})
 
 	// Create a layout to arrange the UI components.
