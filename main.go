@@ -33,7 +33,7 @@ var (
 
 type TreeData struct {
 	nodeType TreeDataNodeType
-	gvr      schema.GroupVersionResource
+
 	// it means, that node is already opened in sub-view
 	// do not add it to a stack view again and again
 	inPreview bool
@@ -159,20 +159,11 @@ func main() {
 
 		// Add resources as child nodes to the group node
 		for _, resource := range group.APIResources {
-
 			gv, err := schema.ParseGroupVersion(group.GroupVersion)
 			if err != nil {
 				continue
 			}
 			gvr := gv.WithResource(resource.Name)
-			data := &TreeData{
-				nodeType: nodeTypeResource,
-				gvr:      gvr,
-			}
-
-			resourceNode := tview.NewTreeNode(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name)).
-				SetColor(tcell.ColorWhite).
-				SetReference(data)
 
 			// fields+
 			paths := getPaths(restMapper, openApiSchema, gvr)
@@ -180,10 +171,13 @@ func main() {
 			for _, line := range paths {
 				rootFieldsNode.AddPath(line.original)
 			}
-			addChildrenFields(resourceNode, rootFieldsNode.Children)
+			tmpNode := tview.NewTreeNode("tmp")
+			addChildrenFields(tmpNode, rootFieldsNode.Children)
+			firstChild := tmpNode.GetChildren()[0]
+			firstChild.SetText(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name))
 			// fields-
 
-			groupNode.AddChild(resourceNode)
+			groupNode.AddChild(firstChild)
 		}
 
 		// Add the group node as a child of the root node
