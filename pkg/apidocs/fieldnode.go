@@ -16,6 +16,9 @@ func NewResourceFieldsNode() *ResourceFieldsNode {
 }
 
 func (node *ResourceFieldsNode) AddPath(path string) {
+	if strings.TrimSpace(path) == "" {
+		return
+	}
 	parts := strings.Split(path, ".")
 	current := node
 	for i, part := range parts {
