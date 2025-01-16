@@ -5,15 +5,10 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/kube-openapi/pkg/util/proto"
-	"k8s.io/kubectl/pkg/util/openapi"
 )
 
 func (o *Options) RunApp() {
@@ -60,7 +55,7 @@ func (o *Options) RunApp() {
 			gvr := gv.WithResource(resource.Name)
 
 			// fields+
-			paths, err := getPaths(o.restMapper, o.resources, gvr)
+			paths, err := getPaths(o.restMapper, o.openApiSchema, gvr)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -203,34 +198,6 @@ func (o *Options) RunApp() {
 	}
 }
 
-// Custom sort function to prioritize apps/v1 and v1 at the top
-func customSortGroups(groups []*metav1.APIResourceList) {
-	// Prioritize these groups at the top
-	topLevels := []string{
-		"apps/v1",
-		"v1",
-		"batch/v1",
-		"rbac.authorization.k8s.io/v1",
-		"networking.k8s.io/v1",
-		"gateway.networking.k8s.io/v1",
-		"gateway.networking.k8s.io/v1beta1",
-	}
-
-	sort.SliceStable(groups, func(i, j int) bool {
-		for _, t := range topLevels {
-			if groups[i].GroupVersion == t {
-				return true
-			}
-			if groups[j].GroupVersion == t {
-				return false
-			}
-		}
-
-		// Default alphabetical sorting
-		return groups[i].GroupVersion < groups[j].GroupVersion
-	})
-}
-
 func addChildrenFields(parent *tview.TreeNode, children map[string]*ResourceFieldsNode, gvr *schema.GroupVersionResource) {
 	if len(children) != 0 {
 		parent.SetText(parent.GetText() + " >")
@@ -255,30 +222,4 @@ func addChildrenFields(parent *tview.TreeNode, children map[string]*ResourceFiel
 			addChildrenFields(childNode, children[key].Children, gvr)
 		}
 	}
-}
-
-func getPaths(restMapper meta.RESTMapper,
-	openApiSchema openapi.Resources,
-	gvr schema.GroupVersionResource,
-) ([]string, error) {
-	visitor := &schemaVisitor{
-		pathSchema:        make(map[string]proto.Schema),
-		prevPath:          strings.ToLower(gvr.Resource),
-		err:               nil,
-		visitedReferences: make(map[string]struct{}),
-	}
-	gvk, err := restMapper.KindFor(gvr)
-	if err != nil {
-		return nil, err
-	}
-	s := openApiSchema.LookupResource(gvk)
-	if s == nil {
-		return nil, err
-	}
-	s.Accept(visitor)
-	if visitor.err != nil {
-		return nil, err
-	}
-	visitorPathsResult := visitor.listPaths()
-	return visitorPathsResult, nil
 }

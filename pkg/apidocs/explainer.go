@@ -17,11 +17,11 @@ type Explainer struct {
 
 func (e Explainer) Explain(w io.Writer, path string) error {
 	if len(path) == 0 {
-		return fmt.Errorf("path must not be empty: %#v", path)
+		return fmt.Errorf("empty path is not allowed for explain: %s", path)
 	}
 	fields := strings.Split(path, ".")
 	if len(fields) > 0 {
-		// Remove resource name
+		// Skip resource name
 		fields = fields[1:]
 	}
 

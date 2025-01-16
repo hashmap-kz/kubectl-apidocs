@@ -16,6 +16,7 @@ var (
 	nodeTypeField    TreeDataNodeType = "field"
 )
 
+// TreeData is used for store custom properties in *tview.TreeNode references
 type TreeData struct {
 	nodeType TreeDataNodeType
 

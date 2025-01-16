@@ -19,7 +19,7 @@ type Options struct {
 	genericiooptions.IOStreams
 	discoveryClient discovery.CachedDiscoveryInterface
 	restMapper      meta.RESTMapper
-	resources       openapi.Resources
+	openApiSchema   openapi.Resources
 	openApiClient   openapiclient.Client
 }
 
@@ -39,9 +39,6 @@ func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "kubectl apidocs",
 		Short: "API resources explained in a tree view format.",
-		Example: `
-kubectl apidocs
-`,
 	}
 	kubeConfigFlags := defaultConfigFlags().WithWarningPrinter(o.IOStreams)
 	flags := cmd.PersistentFlags()
@@ -73,7 +70,7 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	if err != nil {
 		return err
 	}
-	o.resources, err = f.OpenAPISchema()
+	o.openApiSchema, err = f.OpenAPISchema()
 	if err != nil {
 		return err
 	}
@@ -84,7 +81,9 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	return nil
 }
 
-// Copy from https://github.com/kubernetes/kubectl/blob/4f380d07c5e5bb41a037a72c4b35c7f828ba2d59/pkg/cmd/cmd.go#L95-L97
 func defaultConfigFlags() *genericclioptions.ConfigFlags {
-	return genericclioptions.NewConfigFlags(true).WithDeprecatedPasswordFlag().WithDiscoveryBurst(300).WithDiscoveryQPS(50.0)
+	return genericclioptions.NewConfigFlags(true).
+		WithDeprecatedPasswordFlag().
+		WithDiscoveryBurst(300).
+		WithDiscoveryQPS(50.0)
 }
