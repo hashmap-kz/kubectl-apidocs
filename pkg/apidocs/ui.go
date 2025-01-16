@@ -248,7 +248,7 @@ func populateNodeWithResourceFields(
 
 func getHelpMenuContent() string {
 	return strings.TrimSpace(`
-[blue]</term>[-] Search | [blue]<:cmd>[-] Command
-[blue]<q>[-]     Quit   |
+[blue]</term>[-] Search | [blue]<:cmd>[-] Command            |
+[blue]<q>[-]     Quit   | [blue]<TAB>[-]  Focus tree/details |
 `)
 }
