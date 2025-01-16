@@ -120,9 +120,13 @@ func RunApp(uiData *UIData) error {
 	return nil
 }
 
-func populateRootNodeWithResources(root *tview.TreeNode, uiData *UIData, resources []*metav1.APIResourceList) error {
+func populateRootNodeWithResources(
+	apiResourcesRootNode *tview.TreeNode,
+	uiData *UIData,
+	serverPreferredResources []*metav1.APIResourceList,
+) error {
 	// Build the tree with API groups and resources
-	for _, group := range resources {
+	for _, group := range serverPreferredResources {
 		// Create a tree node for the API group
 		groupNode := tview.NewTreeNode(group.GroupVersion).
 			SetColor(tcell.ColorGreen).
@@ -151,7 +155,7 @@ func populateRootNodeWithResources(root *tview.TreeNode, uiData *UIData, resourc
 		}
 
 		// Add the group node as a child of the root node
-		root.AddChild(groupNode)
+		apiResourcesRootNode.AddChild(groupNode)
 	}
 	return nil
 }
