@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -48,6 +49,20 @@ func RunApp(uiData *UIData) error {
 		return err
 	}
 
+	// Create the help menu
+	helpMenu := tview.NewTextView().
+		SetDynamicColors(true).
+		SetTextAlign(tview.AlignLeft)
+
+	// Help menu content
+	helpContent := strings.TrimSpace(`
+[blue]<:>[-] Search
+[blue]<q>[-] Quit
+`)
+
+	helpMenu.SetText(helpContent)
+	helpMenu.SetBorder(true)
+
 	// Create a main tree view (lhs)
 	treeView := tview.NewTreeView()
 	treeView.SetRoot(root)
@@ -69,19 +84,58 @@ func RunApp(uiData *UIData) error {
 		return err
 	}
 
-	// Create a layout to arrange the UI components.
-	layout := tview.NewFlex().
+	// Create a horizontal flex layout for left and right views
+	horizontalFlex := tview.NewFlex().
+		AddItem(treeView, 0, 1, true).
+		AddItem(detailsView, 0, 1, false)
+
+	// Create a vertical flex layout to organize help and horizontal views
+	mainLayout := tview.NewFlex().
 		SetDirection(tview.FlexRow).
-		AddItem(
-			tview.NewFlex().
-				AddItem(treeView, 0, 1, true).
-				AddItem(detailsView, 0, 1, false),
-			0, 1, true,
-		)
+		AddItem(helpMenu, 4, 1, false).
+		AddItem(horizontalFlex, 0, 2, true)
+
+	// Create the input field (hidden by default)
+	inputField := tview.NewInputField().
+		SetLabel("Command: ").
+		SetFieldWidth(20)
+
+	inputField.SetDoneFunc(func(key tcell.Key) {
+		if key == tcell.KeyEnter {
+			mainLayout.RemoveItem(inputField) // Hide the input field
+			app.SetFocus(treeView)            // Focus back to main layout
+		}
+	})
+	inputField.SetBorder(true)
+
+	// Set up application key events
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Show the input field on Shift+:
+		if event.Key() == tcell.KeyRune && event.Rune() == ':' {
+			mainLayout.AddItem(inputField, 3, 1, true) // Show the input field
+			app.SetFocus(inputField)                   // Focus on the input field
+			return nil                                 // Prevent further processing
+		}
+		// Quit the app on 'q'
+		if event.Rune() == 'q' {
+			app.Stop()
+		}
+		return event
+	})
+
+	// // Create a layout to arrange the UI components.
+	// layout := tview.NewFlex().
+	// 	SetDirection(tview.FlexRow).
+	// 	AddItem(
+	// 		tview.NewFlex().
+	// 			AddItem(treeView, 0, 1, true).
+	// 			AddItem(detailsView, 0, 1, false),
+	// 		0, 1, true,
+	// 	)
 
 	// Set up the app and start it.
 
-	if err := app.SetRoot(layout, true).Run(); err != nil {
+	if err := app.SetRoot(mainLayout, true).Run(); err != nil {
 		return err
 	}
 
