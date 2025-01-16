@@ -16,27 +16,6 @@ import (
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
-type TreeDataNodeType string
-
-var (
-	nodeTypeRoot     TreeDataNodeType = "root"
-	nodeTypeGroup    TreeDataNodeType = "group"
-	nodeTypeResource TreeDataNodeType = "resource"
-	nodeTypeField    TreeDataNodeType = "field"
-)
-
-type TreeData struct {
-	nodeType TreeDataNodeType
-
-	// it means, that node is already opened in sub-view
-	// do not add it to a stack view again and again
-	inPreview bool
-
-	originalPath string
-
-	gvr *schema.GroupVersionResource
-}
-
 func (o *Options) RunApp() {
 	// Get API resources
 	resources, err := o.discovery.ServerPreferredResources()
@@ -220,21 +199,6 @@ func (o *Options) RunApp() {
 	if err := app.SetRoot(layout, true).Run(); err != nil {
 		panic(err)
 	}
-}
-
-// TODO: cleanup
-func getReference(node *tview.TreeNode) *TreeData {
-	if data, ok := node.GetReference().(*TreeData); ok {
-		return data
-	}
-	log.Fatalf("unexpected. get-ref failed: %v", node)
-	return nil
-}
-
-func setInPreview(node *tview.TreeNode, inPreview bool) {
-	data := getReference(node)
-	data.inPreview = inPreview
-	node.SetReference(data)
 }
 
 // Custom sort function to prioritize apps/v1 and v1 at the top
