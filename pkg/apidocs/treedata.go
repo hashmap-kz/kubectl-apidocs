@@ -2,6 +2,7 @@ package apidocs
 
 import (
 	"fmt"
+
 	"github.com/rivo/tview"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )

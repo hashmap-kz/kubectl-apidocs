@@ -16,7 +16,7 @@ import (
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
-type ApiDocsOptions struct {
+type APIDocsOptions struct {
 	genericiooptions.IOStreams
 	discoveryClient discovery.CachedDiscoveryInterface
 	restMapper      meta.RESTMapper
@@ -24,8 +24,8 @@ type ApiDocsOptions struct {
 	openAPIClient   openapiclient.Client
 }
 
-func NewOptions(streams genericiooptions.IOStreams) *ApiDocsOptions {
-	return &ApiDocsOptions{
+func NewOptions(streams genericiooptions.IOStreams) *APIDocsOptions {
+	return &APIDocsOptions{
 		IOStreams: streams,
 	}
 }
@@ -55,7 +55,7 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (o *ApiDocsOptions) Run() error {
+func (o *APIDocsOptions) Run() error {
 	err := apidocs.RunApp(&apidocs.UIData{
 		DiscoveryClient: o.discoveryClient,
 		RestMapper:      o.restMapper,
@@ -65,7 +65,7 @@ func (o *ApiDocsOptions) Run() error {
 	return err
 }
 
-func (o *ApiDocsOptions) Complete(f cmdutil.Factory, _ []string) error {
+func (o *APIDocsOptions) Complete(f cmdutil.Factory, _ []string) error {
 	var err error
 	o.discoveryClient, err = f.ToDiscoveryClient()
 	if err != nil {

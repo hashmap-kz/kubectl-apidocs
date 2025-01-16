@@ -3,8 +3,9 @@ package apidocs
 import (
 	"bytes"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/discovery"
@@ -24,12 +25,10 @@ type UIData struct {
 }
 
 func RunApp(uiData *UIData) error {
-	var listenersErr error
-
-	// Get API resources
-	resources, err := uiData.DiscoveryClient.ServerPreferredResources()
+	// Get API serverPreferredResources
+	serverPreferredResources, err := uiData.DiscoveryClient.ServerPreferredResources()
 	if err != nil {
-		return fmt.Errorf("error getting API resources: %v", err)
+		return fmt.Errorf("error getting API serverPreferredResources: %v", err)
 	}
 
 	// Create a new tview application
@@ -41,10 +40,10 @@ func RunApp(uiData *UIData) error {
 		SetReference(&TreeData{nodeType: nodeTypeRoot})
 
 	// Sort the API groups with custom logic to prioritize apps/v1 and v1 at the top
-	customSortGroups(resources)
+	customSortGroups(serverPreferredResources)
 
 	// Populate root node with groups/resources/fields
-	err = constructRootNode(root, uiData, resources)
+	err = populateRootNodeWithResources(root, uiData, serverPreferredResources)
 	if err != nil {
 		return err
 	}
@@ -65,6 +64,37 @@ func RunApp(uiData *UIData) error {
 	detailsView.SetScrollable(true)
 	detailsView.SetWrap(true)
 
+	err = setupLIsteners(uiData, app, root, treeView, detailsView)
+	if err != nil {
+		return err
+	}
+
+	// Create a layout to arrange the UI components.
+	layout := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(
+			tview.NewFlex().
+				AddItem(treeView, 0, 1, true).
+				AddItem(detailsView, 0, 1, false),
+			0, 1, true,
+		)
+
+	// Set up the app and start it.
+
+	if err := app.SetRoot(layout, true).Run(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setupLIsteners(uiData *UIData, app *tview.Application, root *tview.TreeNode, treeView *tview.TreeView, detailsView *tview.TextView) error {
+	var listenersErr error
+
+	// Stack to handle navigation back
+	var navigationStack []*tview.TreeNode
+	navigationStack = append(navigationStack, root)
+
 	detailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyTab {
 			app.SetFocus(treeView) // Switch focus to the TreeView
@@ -72,10 +102,6 @@ func RunApp(uiData *UIData) error {
 		}
 		return event
 	})
-
-	// Stack to handle navigation back
-	var navigationStack []*tview.TreeNode
-	navigationStack = append(navigationStack, root)
 
 	// Add key event handler for toggling node expansion
 	treeView.SetSelectedFunc(func(node *tview.TreeNode) {
@@ -165,27 +191,10 @@ func RunApp(uiData *UIData) error {
 	if listenersErr != nil {
 		return listenersErr
 	}
-
-	// Create a layout to arrange the UI components.
-	layout := tview.NewFlex().
-		SetDirection(tview.FlexRow).
-		AddItem(
-			tview.NewFlex().
-				AddItem(treeView, 0, 1, true).
-				AddItem(detailsView, 0, 1, false),
-			0, 1, true,
-		)
-
-	// Set up the app and start it.
-
-	if err := app.SetRoot(layout, true).Run(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func constructRootNode(root *tview.TreeNode, uiData *UIData, resources []*metav1.APIResourceList) error {
+func populateRootNodeWithResources(root *tview.TreeNode, uiData *UIData, resources []*metav1.APIResourceList) error {
 	// Build the tree with API groups and resources
 	for _, group := range resources {
 		// Create a tree node for the API group
