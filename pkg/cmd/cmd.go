@@ -1,7 +1,9 @@
-package apidocs
+package cmd
 
 import (
 	"os"
+
+	"github.com/hashmap-kz/kubectl-apidocs/pkg/apidocs"
 
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
@@ -14,7 +16,7 @@ import (
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
-type Options struct {
+type ApiDocsOptions struct {
 	genericiooptions.IOStreams
 	discoveryClient discovery.CachedDiscoveryInterface
 	restMapper      meta.RESTMapper
@@ -22,8 +24,8 @@ type Options struct {
 	openAPIClient   openapiclient.Client
 }
 
-func NewOptions(streams genericiooptions.IOStreams) *Options {
-	return &Options{
+func NewOptions(streams genericiooptions.IOStreams) *ApiDocsOptions {
+	return &ApiDocsOptions{
 		IOStreams: streams,
 	}
 }
@@ -53,14 +55,18 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-func (o *Options) Run() error {
-	o.RunApp()
-	return nil
+func (o *ApiDocsOptions) Run() error {
+	err := apidocs.RunApp(&apidocs.UIData{
+		DiscoveryClient: o.discoveryClient,
+		RestMapper:      o.restMapper,
+		OpenAPISchema:   o.openAPISchema,
+		OpenAPIClient:   o.openAPIClient,
+	})
+	return err
 }
 
-func (o *Options) Complete(f cmdutil.Factory, _ []string) error {
+func (o *ApiDocsOptions) Complete(f cmdutil.Factory, _ []string) error {
 	var err error
-
 	o.discoveryClient, err = f.ToDiscoveryClient()
 	if err != nil {
 		return err

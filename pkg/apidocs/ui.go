@@ -3,19 +3,30 @@ package apidocs
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"sort"
+
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/client-go/discovery"
+	openapiclient "k8s.io/client-go/openapi"
+	"k8s.io/kubectl/pkg/util/openapi"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func (o *Options) RunApp() {
+type UIData struct {
+	DiscoveryClient discovery.CachedDiscoveryInterface
+	RestMapper      meta.RESTMapper
+	OpenAPISchema   openapi.Resources
+	OpenAPIClient   openapiclient.Client
+}
+
+func RunApp(o *UIData) error {
 	// Get API resources
-	resources, err := o.discoveryClient.ServerPreferredResources()
+	resources, err := o.DiscoveryClient.ServerPreferredResources()
 	if err != nil {
-		log.Fatalf("Error getting API resources: %v", err)
+		return fmt.Errorf("error getting API resources: %v", err)
 	}
 
 	// Create a new tview application
@@ -23,7 +34,8 @@ func (o *Options) RunApp() {
 
 	// Create the root tree node
 	root := tview.NewTreeNode("API Resources").
-		SetColor(tcell.ColorYellow).SetReference(&TreeData{nodeType: nodeTypeRoot})
+		SetColor(tcell.ColorYellow).
+		SetReference(&TreeData{nodeType: nodeTypeRoot})
 
 	// Sort the API groups with custom logic to prioritize apps/v1 and v1 at the top
 	customSortGroups(resources)
@@ -58,9 +70,9 @@ func (o *Options) RunApp() {
 			gvr := gv.WithResource(resource.Name)
 
 			// fields+
-			paths, err := getPaths(o.restMapper, o.openAPISchema, gvr)
+			paths, err := getPaths(o.RestMapper, o.OpenAPISchema, gvr)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			rootFieldsNode := &ResourceFieldsNode{Name: "root"}
@@ -166,7 +178,7 @@ func (o *Options) RunApp() {
 		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
 			explainer := Explainer{
 				gvr:           *data.gvr,
-				openAPIClient: o.openAPIClient,
+				openAPIClient: o.OpenAPIClient,
 			}
 
 			buf := bytes.Buffer{}
@@ -190,8 +202,10 @@ func (o *Options) RunApp() {
 	// Set up the app and start it.
 
 	if err := app.SetRoot(layout, true).Run(); err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 func addChildrenFields(parent *tview.TreeNode, children map[string]*ResourceFieldsNode, gvr *schema.GroupVersionResource) {
