@@ -155,6 +155,10 @@ func setupListenersForCmdInput(uiState *UIState) error {
 	// Command was set, process it, close input cmd, set focus onto the tree
 	uiState.cmdInput.SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEnter {
+			searchTerm := uiState.cmdInput.GetText()
+			highlightMatchingNodes(uiState.apiResourcesRootNode, searchTerm)
+			uiState.cmdInput.SetText("")
+
 			uiState.mainLayout.RemoveItem(uiState.cmdInput)    // Hide the input field
 			uiState.app.SetFocus(uiState.apiResourcesTreeView) // Focus back to main layout
 		}
