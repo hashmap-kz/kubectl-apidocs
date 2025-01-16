@@ -35,8 +35,6 @@ func (o *Options) RunApp() {
 			SetColor(tcell.ColorGreen).
 			SetReference(&TreeData{nodeType: nodeTypeGroup})
 
-		// groupNode.SetExpanded(false)
-
 		// Sort the resources inside each group alphabetically
 		sort.SliceStable(group.APIResources, func(i, j int) bool {
 			return group.APIResources[i].Name < group.APIResources[j].Name
@@ -55,7 +53,7 @@ func (o *Options) RunApp() {
 			gvr := gv.WithResource(resource.Name)
 
 			// fields+
-			paths, err := getPaths(o.restMapper, o.openApiSchema, gvr)
+			paths, err := getPaths(o.restMapper, o.openAPISchema, gvr)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -129,7 +127,6 @@ func (o *Options) RunApp() {
 				SetCurrentNode(node)
 
 			node.SetExpanded(true)
-
 		} else {
 			// just expand subtree
 			node.SetExpanded(!node.IsExpanded())
@@ -169,7 +166,7 @@ func (o *Options) RunApp() {
 		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
 			explainer := Explainer{
 				gvr:             *data.gvr,
-				openAPIV3Client: o.openApiClient,
+				openAPIV3Client: o.openAPIClient,
 			}
 
 			buf := bytes.Buffer{}
@@ -177,7 +174,6 @@ func (o *Options) RunApp() {
 			if err == nil {
 				detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
 			}
-
 		}
 	})
 

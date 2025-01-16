@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/hashmap-kz/kubectl-apidocs/pkg/apidocs"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
 func main() {

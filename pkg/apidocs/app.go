@@ -10,7 +10,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/discovery"
 	openapiclient "k8s.io/client-go/openapi"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/util/openapi"
 )
@@ -19,8 +18,8 @@ type Options struct {
 	genericiooptions.IOStreams
 	discoveryClient discovery.CachedDiscoveryInterface
 	restMapper      meta.RESTMapper
-	openApiSchema   openapi.Resources
-	openApiClient   openapiclient.Client
+	openAPISchema   openapi.Resources
+	openAPIClient   openapiclient.Client
 }
 
 func NewOptions(streams genericiooptions.IOStreams) *Options {
@@ -59,7 +58,7 @@ func (o *Options) Run() error {
 	return nil
 }
 
-func (o *Options) Complete(f cmdutil.Factory, args []string) error {
+func (o *Options) Complete(f cmdutil.Factory, _ []string) error {
 	var err error
 
 	o.discoveryClient, err = f.ToDiscoveryClient()
@@ -70,11 +69,11 @@ func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	if err != nil {
 		return err
 	}
-	o.openApiSchema, err = f.OpenAPISchema()
+	o.openAPISchema, err = f.OpenAPISchema()
 	if err != nil {
 		return err
 	}
-	o.openApiClient, err = f.OpenAPIV3Client()
+	o.openAPIClient, err = f.OpenAPIV3Client()
 	if err != nil {
 		return err
 	}

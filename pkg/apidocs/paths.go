@@ -12,7 +12,7 @@ import (
 // TODO: cache somehow
 
 func getPaths(restMapper meta.RESTMapper,
-	openApiSchema openapi.Resources,
+	openAPISchema openapi.Resources,
 	gvr schema.GroupVersionResource,
 ) ([]string, error) {
 	visitor := &schemaVisitor{
@@ -25,7 +25,7 @@ func getPaths(restMapper meta.RESTMapper,
 	if err != nil {
 		return nil, err
 	}
-	s := openApiSchema.LookupResource(gvk)
+	s := openAPISchema.LookupResource(gvk)
 	if s == nil {
 		return nil, err
 	}

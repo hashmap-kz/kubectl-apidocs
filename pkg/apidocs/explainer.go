@@ -16,7 +16,7 @@ type Explainer struct {
 }
 
 func (e Explainer) Explain(w io.Writer, path string) error {
-	if len(path) == 0 {
+	if path == "" {
 		return fmt.Errorf("empty path is not allowed for explain: %s", path)
 	}
 	fields := strings.Split(path, ".")

@@ -19,7 +19,6 @@ func (node *ResourceFieldsNode) AddPath(path string) {
 	parts := strings.Split(path, ".")
 	current := node
 	for i, part := range parts {
-
 		// Ensure the child exists
 		if current.Children == nil {
 			current.Children = make(map[string]*ResourceFieldsNode)
