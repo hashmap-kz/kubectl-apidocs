@@ -156,6 +156,19 @@ func setupListeners(
 				listenersErr = err
 				return nil
 			}
+			data, err := extractTreeData(cur)
+			if err != nil {
+				listenersErr = err
+				return nil
+			}
+			// don't need to expand the resource, we need just its name
+			if data.nodeType == nodeTypeResource {
+				cur.SetExpanded(false)
+			}
+			// always expand groups
+			if data.nodeType == nodeTypeGroup {
+				cur.SetExpanded(true)
+			}
 
 			navigationStack = navigationStack[:len(navigationStack)-1]
 			prevNode := navigationStack[len(navigationStack)-1]
