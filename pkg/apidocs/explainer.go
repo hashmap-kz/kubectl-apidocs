@@ -15,7 +15,14 @@ type Explainer struct {
 	openAPIClient openapiclient.Client
 }
 
-func (e Explainer) Explain(w io.Writer, path string) error {
+func NewExplainer(gvr schema.GroupVersionResource, openAPIClient openapiclient.Client) *Explainer {
+	return &Explainer{
+		gvr:           gvr,
+		openAPIClient: openAPIClient,
+	}
+}
+
+func (e *Explainer) Explain(w io.Writer, path string) error {
 	if path == "" {
 		return fmt.Errorf("empty path is not allowed for explain: %s", path)
 	}

@@ -126,11 +126,7 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 
 		uiState.apiResourcesDetailsView.SetText(data.path)
 		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
-			explainer := Explainer{
-				gvr:           *data.gvr,
-				openAPIClient: uiData.OpenAPIClient,
-			}
-
+			explainer := NewExplainer(*data.gvr, uiData.OpenAPIClient)
 			buf := bytes.Buffer{}
 			err := explainer.Explain(&buf, data.path)
 			if err == nil {

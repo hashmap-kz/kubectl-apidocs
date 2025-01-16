@@ -24,14 +24,14 @@ type APIDocsOptions struct {
 	openAPIClient   openapiclient.Client
 }
 
-func NewOptions(streams genericiooptions.IOStreams) *APIDocsOptions {
+func NewAPIDocsOptions(streams genericiooptions.IOStreams) *APIDocsOptions {
 	return &APIDocsOptions{
 		IOStreams: streams,
 	}
 }
 
 func NewCmd() *cobra.Command {
-	o := NewOptions(genericiooptions.IOStreams{
+	o := NewAPIDocsOptions(genericiooptions.IOStreams{
 		In:     os.Stdin,
 		Out:    os.Stdout,
 		ErrOut: os.Stderr,
