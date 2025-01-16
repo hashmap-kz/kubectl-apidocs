@@ -24,6 +24,13 @@ type UIData struct {
 	OpenAPIClient   openapiclient.Client
 }
 
+type cmdInputPurpose string
+
+var (
+	cmdInputPurposeCmd    cmdInputPurpose = "cmd"
+	cmdInputPurposeSearch cmdInputPurpose = "search"
+)
+
 type UIState struct {
 	app                     *tview.Application
 	apiResourcesRootNode    *tview.TreeNode
@@ -32,6 +39,8 @@ type UIState struct {
 	apiResourcesViewsLayout *tview.Flex
 	mainLayout              *tview.Flex
 	cmdInput                *tview.InputField
+	cmdInputIsOn            bool
+	cmdInputPurpose         cmdInputPurpose
 }
 
 func RunApp(uiData *UIData) error {
@@ -239,7 +248,7 @@ func populateNodeWithResourceFields(
 
 func getHelpMenuContent() string {
 	return strings.TrimSpace(`
-[blue]<:>[-] Search
-[blue]<q>[-] Quit
+[blue]</term>[-] Search | [blue]<:cmd>[-] Command
+[blue]<q>[-]     Quit   |
 `)
 }

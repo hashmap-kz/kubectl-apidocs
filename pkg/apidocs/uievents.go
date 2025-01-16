@@ -159,6 +159,7 @@ func setupListenersForCmdInput(uiState *UIState) error {
 			highlightMatchingNodes(uiState.apiResourcesRootNode, searchTerm)
 			uiState.cmdInput.SetText("")
 
+			uiState.cmdInputIsOn = false
 			uiState.mainLayout.RemoveItem(uiState.cmdInput)    // Hide the input field
 			uiState.app.SetFocus(uiState.apiResourcesTreeView) // Focus back to main layout
 		}
@@ -171,7 +172,24 @@ func setupListenersForApp(uiState *UIState) error {
 	// Set up application key events
 	uiState.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		// Show the input field on Shift+:
+		if event.Key() == tcell.KeyRune && event.Rune() == '/' {
+			if uiState.cmdInputIsOn {
+				return nil
+			}
+			uiState.cmdInput.SetLabel("Search:")
+			uiState.cmdInputIsOn = true
+			uiState.cmdInputPurpose = cmdInputPurposeSearch
+			uiState.mainLayout.AddItem(uiState.cmdInput, 3, 1, true) // Show the input field
+			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
+			return nil                                               // Prevent further processing
+		}
 		if event.Key() == tcell.KeyRune && event.Rune() == ':' {
+			if uiState.cmdInputIsOn {
+				return nil
+			}
+			uiState.cmdInput.SetLabel("Command:")
+			uiState.cmdInputIsOn = true
+			uiState.cmdInputPurpose = cmdInputPurposeCmd
 			uiState.mainLayout.AddItem(uiState.cmdInput, 3, 1, true) // Show the input field
 			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
 			return nil                                               // Prevent further processing
