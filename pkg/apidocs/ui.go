@@ -26,14 +26,14 @@ type UIData struct {
 }
 
 type UIState struct {
-	app            *tview.Application
-	root           *tview.TreeNode
-	helpMenu       *tview.TextView
-	treeView       *tview.TreeView
-	detailsView    *tview.TextView
-	horizontalFlex *tview.Flex
-	mainLayout     *tview.Flex
-	inputField     *tview.InputField
+	app                     *tview.Application
+	apiResourcesRootNode    *tview.TreeNode
+	helpMenu                *tview.TextView
+	apiResourcesTreeView    *tview.TreeView
+	apiResourcesDetailsView *tview.TextView
+	apiResourcesViewsLayout *tview.Flex
+	mainLayout              *tview.Flex
+	cmdInput                *tview.InputField
 }
 
 func RunApp(uiData *UIData) error {
@@ -47,7 +47,7 @@ func RunApp(uiData *UIData) error {
 	app := tview.NewApplication()
 
 	// Create the root tree node
-	root := tview.NewTreeNode("API Resources").
+	apiResourcesRootNode := tview.NewTreeNode("API Resources").
 		SetColor(tcell.ColorYellow).
 		SetReference(&TreeData{nodeType: nodeTypeRoot})
 
@@ -55,67 +55,60 @@ func RunApp(uiData *UIData) error {
 	customSortGroups(serverPreferredResources)
 
 	// Populate root node with groups/resources/fields
-	err = populateRootNodeWithResources(root, uiData, serverPreferredResources)
+	err = populateRootNodeWithResources(apiResourcesRootNode, uiData, serverPreferredResources)
 	if err != nil {
 		return err
 	}
 
-	// Create the help menu
-	helpMenu := tview.NewTextView().
-		SetDynamicColors(true).
-		SetTextAlign(tview.AlignLeft)
-
-	// Help menu content
-	helpContent := strings.TrimSpace(`
-[blue]<:>[-] Search
-[blue]<q>[-] Quit
-`)
-
-	helpMenu.SetText(helpContent)
+	// Create the help menu (top)
+	helpMenu := tview.NewTextView()
+	helpMenu.SetDynamicColors(true)
+	helpMenu.SetTextAlign(tview.AlignLeft)
+	helpMenu.SetText(getHelpMenuContent())
 	helpMenu.SetBorder(true)
 
 	// Create a main tree view (lhs)
-	treeView := tview.NewTreeView()
-	treeView.SetRoot(root)
-	treeView.SetCurrentNode(root)
-	treeView.SetGraphicsColor(tcell.ColorWhite)
-	treeView.SetTitle("Resources")
-	treeView.SetBorder(true)
+	apiResourcesTreeView := tview.NewTreeView()
+	apiResourcesTreeView.SetRoot(apiResourcesRootNode)
+	apiResourcesTreeView.SetCurrentNode(apiResourcesRootNode)
+	apiResourcesTreeView.SetGraphicsColor(tcell.ColorWhite)
+	apiResourcesTreeView.SetTitle("Resources")
+	apiResourcesTreeView.SetBorder(true)
 
 	// Create a main details view (rhs)
-	detailsView := tview.NewTextView()
-	detailsView.SetDynamicColors(true)
-	detailsView.SetBorder(true)
-	detailsView.SetTitle("Details")
-	detailsView.SetScrollable(true)
-	detailsView.SetWrap(true)
+	apiResourcesDetailsView := tview.NewTextView()
+	apiResourcesDetailsView.SetDynamicColors(true)
+	apiResourcesDetailsView.SetBorder(true)
+	apiResourcesDetailsView.SetTitle("Details")
+	apiResourcesDetailsView.SetScrollable(true)
+	apiResourcesDetailsView.SetWrap(true)
 
-	// Create a horizontal flex layout for left and right views
-	horizontalFlex := tview.NewFlex()
-	horizontalFlex.AddItem(treeView, 0, 1, true)
-	horizontalFlex.AddItem(detailsView, 0, 1, false)
+	// Create a horizontal flex layout for resources-tree-view and resources-details-view
+	apiResourcesViewsLayout := tview.NewFlex()
+	apiResourcesViewsLayout.AddItem(apiResourcesTreeView, 0, 1, true)
+	apiResourcesViewsLayout.AddItem(apiResourcesDetailsView, 0, 1, false)
 
-	// Create a vertical flex layout to organize help and horizontal views
+	// Create a main layout for app
 	mainLayout := tview.NewFlex()
 	mainLayout.SetDirection(tview.FlexRow)
 	mainLayout.AddItem(helpMenu, 4, 1, false)
-	mainLayout.AddItem(horizontalFlex, 0, 2, true)
+	mainLayout.AddItem(apiResourcesViewsLayout, 0, 2, true)
 
-	// Create the input field (hidden by default)
-	inputField := tview.NewInputField()
-	inputField.SetLabel("Command: ")
-	inputField.SetFieldWidth(20)
-	inputField.SetBorder(true)
+	// Create the input field (bottom, hidden by default)
+	cmdInput := tview.NewInputField()
+	cmdInput.SetLabel("Command: ")
+	cmdInput.SetFieldWidth(20)
+	cmdInput.SetBorder(true)
 
 	// Set up listeners for app state.
 	err = setupListeners(uiData, &UIState{
-		app:            app,
-		root:           root,
-		treeView:       treeView,
-		detailsView:    detailsView,
-		horizontalFlex: horizontalFlex,
-		mainLayout:     mainLayout,
-		inputField:     inputField,
+		app:                     app,
+		apiResourcesRootNode:    apiResourcesRootNode,
+		apiResourcesTreeView:    apiResourcesTreeView,
+		apiResourcesDetailsView: apiResourcesDetailsView,
+		apiResourcesViewsLayout: apiResourcesViewsLayout,
+		mainLayout:              mainLayout,
+		cmdInput:                cmdInput,
 	})
 	if err != nil {
 		return err
@@ -138,15 +131,15 @@ func setupListeners(
 
 	// Stack to handle navigation back
 	var navigationStack []*tview.TreeNode
-	navigationStack = append(navigationStack, uiState.root)
+	navigationStack = append(navigationStack, uiState.apiResourcesRootNode)
 
 	// Set up application key events
 	uiState.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		// Show the input field on Shift+:
 		if event.Key() == tcell.KeyRune && event.Rune() == ':' {
-			uiState.mainLayout.AddItem(uiState.inputField, 3, 1, true) // Show the input field
-			uiState.app.SetFocus(uiState.inputField)                   // Focus on the input field
-			return nil                                                 // Prevent further processing
+			uiState.mainLayout.AddItem(uiState.cmdInput, 3, 1, true) // Show the input field
+			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
+			return nil                                               // Prevent further processing
 		}
 		// Quit the app on 'q'
 		if event.Rune() == 'q' {
@@ -156,23 +149,23 @@ func setupListeners(
 	})
 
 	// Command was set, process it, close input cmd, set focus onto the tree
-	uiState.inputField.SetDoneFunc(func(key tcell.Key) {
+	uiState.cmdInput.SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEnter {
-			uiState.mainLayout.RemoveItem(uiState.inputField) // Hide the input field
-			uiState.app.SetFocus(uiState.treeView)            // Focus back to main layout
+			uiState.mainLayout.RemoveItem(uiState.cmdInput)    // Hide the input field
+			uiState.app.SetFocus(uiState.apiResourcesTreeView) // Focus back to main layout
 		}
 	})
 
-	uiState.detailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	uiState.apiResourcesDetailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyTab {
-			uiState.app.SetFocus(uiState.treeView) // Switch focus to the TreeView
+			uiState.app.SetFocus(uiState.apiResourcesTreeView) // Switch focus to the TreeView
 			return nil
 		}
 		return event
 	})
 
 	// Add key event handler for toggling node expansion
-	uiState.treeView.SetSelectedFunc(func(node *tview.TreeNode) {
+	uiState.apiResourcesTreeView.SetSelectedFunc(func(node *tview.TreeNode) {
 		if node == nil {
 			return
 		}
@@ -191,7 +184,7 @@ func setupListeners(
 				return
 			}
 			navigationStack = append(navigationStack, node)
-			uiState.treeView.SetRoot(node).SetCurrentNode(node)
+			uiState.apiResourcesTreeView.SetRoot(node).SetCurrentNode(node)
 			node.SetExpanded(true)
 		} else {
 			// just expand subtree
@@ -203,9 +196,9 @@ func setupListeners(
 	}
 
 	// Handle TAB key to switch focus between views
-	uiState.treeView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	uiState.apiResourcesTreeView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyTab {
-			uiState.app.SetFocus(uiState.detailsView) // Switch focus to the DetailsView
+			uiState.app.SetFocus(uiState.apiResourcesDetailsView) // Switch focus to the DetailsView
 			return nil
 		}
 
@@ -234,7 +227,7 @@ func setupListeners(
 
 			navigationStack = navigationStack[:len(navigationStack)-1]
 			prevNode := navigationStack[len(navigationStack)-1]
-			uiState.treeView.SetRoot(prevNode).SetCurrentNode(cur)
+			uiState.apiResourcesTreeView.SetRoot(prevNode).SetCurrentNode(cur)
 			return nil
 		}
 
@@ -245,7 +238,7 @@ func setupListeners(
 	}
 
 	// Handle selection changes
-	uiState.treeView.SetChangedFunc(func(node *tview.TreeNode) {
+	uiState.apiResourcesTreeView.SetChangedFunc(func(node *tview.TreeNode) {
 		if node == nil {
 			return
 		}
@@ -255,7 +248,7 @@ func setupListeners(
 			return
 		}
 
-		uiState.detailsView.SetText(data.path)
+		uiState.apiResourcesDetailsView.SetText(data.path)
 		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
 			explainer := Explainer{
 				gvr:           *data.gvr,
@@ -265,7 +258,7 @@ func setupListeners(
 			buf := bytes.Buffer{}
 			err := explainer.Explain(&buf, data.path)
 			if err == nil {
-				uiState.detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
+				uiState.apiResourcesDetailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
 			}
 		}
 	})
@@ -366,4 +359,11 @@ func populateNodeWithResourceFields(parent *tview.TreeNode, children map[string]
 			populateNodeWithResourceFields(childNode, children[key].Children, gvr)
 		}
 	}
+}
+
+func getHelpMenuContent() string {
+	return strings.TrimSpace(`
+[blue]<:>[-] Search
+[blue]<q>[-] Quit
+`)
 }
