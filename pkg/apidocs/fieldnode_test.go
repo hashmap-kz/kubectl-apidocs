@@ -25,30 +25,33 @@ func TestNewResourceFieldsNode(t *testing.T) {
 }
 
 func TestAddPath_SingleLevel(t *testing.T) {
+	const name = "name"
 	node := NewResourceFieldsNode()
-	node.AddPath("name")
+	node.AddPath(name)
 
 	if len(node.Children) != 1 {
 		t.Fatalf("Expected 1 child, got %d", len(node.Children))
 	}
 
-	child, exists := node.Children["name"]
+	child, exists := node.Children[name]
 	if !exists {
 		t.Fatal("Expected child 'name' to exist")
 	}
 
-	if child.Name != "name" {
+	if child.Name != name {
 		t.Fatalf("Expected child.Name to be 'name', got %s", child.Name)
 	}
 
-	if child.Path != "name" {
+	if child.Path != name {
 		t.Fatalf("Expected child.Path to be 'name', got %s", child.Path)
 	}
 }
 
 func TestAddPath_MultiLevel(t *testing.T) {
+	const metadataName = "metadata.name"
+
 	node := NewResourceFieldsNode()
-	node.AddPath("metadata.name")
+	node.AddPath(metadataName)
 
 	if len(node.Children) != 1 {
 		t.Fatalf("Expected 1 child, got %d", len(node.Children))
@@ -80,7 +83,7 @@ func TestAddPath_MultiLevel(t *testing.T) {
 		t.Fatalf("Expected name.Name to be 'name', got %s", name.Name)
 	}
 
-	if name.Path != "metadata.name" {
+	if name.Path != metadataName {
 		t.Fatalf("Expected name.Path to be 'metadata.name', got %s", name.Path)
 	}
 }

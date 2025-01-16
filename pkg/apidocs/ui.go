@@ -28,7 +28,6 @@ type UIData struct {
 type UIState struct {
 	app                     *tview.Application
 	apiResourcesRootNode    *tview.TreeNode
-	helpMenu                *tview.TextView
 	apiResourcesTreeView    *tview.TreeView
 	apiResourcesDetailsView *tview.TextView
 	apiResourcesViewsLayout *tview.Flex
