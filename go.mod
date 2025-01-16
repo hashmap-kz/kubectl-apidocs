@@ -1,10 +1,11 @@
-module github.com/hashmap-kz/kubectl-docs
+module github.com/hashmap-kz/kubectl-apidocs
 
 go 1.23.4
 
 require (
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/rivo/tview v0.0.0-20241227133733-17b7edb88c57
+	github.com/spf13/cobra v1.8.1
 	k8s.io/apimachinery v0.32.0
 	k8s.io/cli-runtime v0.32.0
 	k8s.io/client-go v0.32.0
@@ -56,7 +57,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect

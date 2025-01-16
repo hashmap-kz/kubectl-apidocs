@@ -3,6 +3,8 @@ package apidocs
 import (
 	"os"
 
+	"k8s.io/cli-runtime/pkg/genericiooptions"
+
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -14,21 +16,21 @@ import (
 )
 
 type Options struct {
-	genericclioptions.IOStreams
-	discovery       discovery.CachedDiscoveryInterface
-	mapper          meta.RESTMapper
-	schema          openapi.Resources
-	openAPIV3Client openapiclient.Client
+	genericiooptions.IOStreams
+	discoveryClient discovery.CachedDiscoveryInterface
+	restMapper      meta.RESTMapper
+	resources       openapi.Resources
+	openApiClient   openapiclient.Client
 }
 
-func NewOptions(streams genericclioptions.IOStreams) *Options {
+func NewOptions(streams genericiooptions.IOStreams) *Options {
 	return &Options{
 		IOStreams: streams,
 	}
 }
 
 func NewCmd() *cobra.Command {
-	o := NewOptions(genericclioptions.IOStreams{
+	o := NewOptions(genericiooptions.IOStreams{
 		In:     os.Stdin,
 		Out:    os.Stdout,
 		ErrOut: os.Stderr,
@@ -63,19 +65,19 @@ func (o *Options) Run() error {
 func (o *Options) Complete(f cmdutil.Factory, args []string) error {
 	var err error
 
-	o.discovery, err = f.ToDiscoveryClient()
+	o.discoveryClient, err = f.ToDiscoveryClient()
 	if err != nil {
 		return err
 	}
-	o.mapper, err = f.ToRESTMapper()
+	o.restMapper, err = f.ToRESTMapper()
 	if err != nil {
 		return err
 	}
-	o.schema, err = f.OpenAPISchema()
+	o.resources, err = f.OpenAPISchema()
 	if err != nil {
 		return err
 	}
-	o.openAPIV3Client, err = f.OpenAPIV3Client()
+	o.openApiClient, err = f.OpenAPIV3Client()
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,7 @@ import (
 
 func (o *Options) RunApp() {
 	// Get API resources
-	resources, err := o.discovery.ServerPreferredResources()
+	resources, err := o.discoveryClient.ServerPreferredResources()
 	if err != nil {
 		log.Fatalf("Error getting API resources: %v", err)
 	}
@@ -60,12 +60,12 @@ func (o *Options) RunApp() {
 			gvr := gv.WithResource(resource.Name)
 
 			// fields+
-			paths, err := getPaths(o.mapper, o.schema, gvr)
+			paths, err := getPaths(o.restMapper, o.resources, gvr)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			rootFieldsNode := &Node{Name: "root"}
+			rootFieldsNode := &ResourceFieldsNode{Name: "root"}
 			for _, fieldPath := range paths {
 				rootFieldsNode.AddPath(fieldPath)
 			}
@@ -170,16 +170,18 @@ func (o *Options) RunApp() {
 			return
 		}
 		data := getReference(node)
-		detailsView.SetText(data.originalPath)
+		detailsView.SetText(data.path)
 		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
 			explainer := Explainer{
 				gvr:             *data.gvr,
-				openAPIV3Client: o.openAPIV3Client,
+				openAPIV3Client: o.openApiClient,
 			}
 
 			buf := bytes.Buffer{}
-			explainer.Explain(&buf, data.originalPath)
-			detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.originalPath, buf.String()))
+			err := explainer.Explain(&buf, data.path)
+			if err == nil {
+				detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
+			}
 
 		}
 	})
@@ -229,9 +231,9 @@ func customSortGroups(groups []*metav1.APIResourceList) {
 	})
 }
 
-func addChildrenFields(parent *tview.TreeNode, children map[string]*Node, gvr *schema.GroupVersionResource) {
+func addChildrenFields(parent *tview.TreeNode, children map[string]*ResourceFieldsNode, gvr *schema.GroupVersionResource) {
 	if len(children) != 0 {
-		parent.SetText(parent.GetText() + " ⯈")
+		parent.SetText(parent.GetText() + " >")
 		parent.SetColor(tcell.ColorGreen)
 		parent.SetExpanded(!parent.IsExpanded())
 	}
@@ -244,9 +246,9 @@ func addChildrenFields(parent *tview.TreeNode, children map[string]*Node, gvr *s
 
 	for _, key := range keys {
 		childNode := tview.NewTreeNode(children[key].Name).SetReference(&TreeData{
-			nodeType:     nodeTypeField,
-			originalPath: children[key].OriginalPath,
-			gvr:          gvr,
+			nodeType: nodeTypeField,
+			path:     children[key].Path,
+			gvr:      gvr,
 		})
 		parent.AddChild(childNode)
 		if children[key].Children != nil {

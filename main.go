@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashmap-kz/kubectl-docs/pkg/apidocs"
+	"github.com/hashmap-kz/kubectl-apidocs/pkg/apidocs"
 )
 
 func main() {

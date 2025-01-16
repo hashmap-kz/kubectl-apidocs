@@ -23,9 +23,8 @@ type TreeData struct {
 	// do not add it to a stack view again and again
 	inPreview bool
 
-	originalPath string
-
-	gvr *schema.GroupVersionResource
+	path string
+	gvr  *schema.GroupVersionResource
 }
 
 // TODO: cleanup

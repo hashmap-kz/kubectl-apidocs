@@ -2,35 +2,36 @@ package apidocs
 
 import "strings"
 
-type Node struct {
-	Name         string
-	Children     map[string]*Node
-	OriginalPath string
+// ResourceFieldsNode used for construct a tree-structure from 'sts.metadata.name' paths
+type ResourceFieldsNode struct {
+	Name     string
+	Children map[string]*ResourceFieldsNode
+	Path     string
 }
 
-func NewTreeNode() *Node {
-	return &Node{
-		Children: make(map[string]*Node),
+func NewResourceFieldsNode() *ResourceFieldsNode {
+	return &ResourceFieldsNode{
+		Children: make(map[string]*ResourceFieldsNode),
 	}
 }
 
-func (node *Node) AddPath(path string) {
+func (node *ResourceFieldsNode) AddPath(path string) {
 	parts := strings.Split(path, ".")
 	current := node
 	for i, part := range parts {
 
 		// Ensure the child exists
 		if current.Children == nil {
-			current.Children = make(map[string]*Node)
+			current.Children = make(map[string]*ResourceFieldsNode)
 		}
 
 		if _, exists := current.Children[part]; !exists {
-			current.Children[part] = NewTreeNode()
+			current.Children[part] = NewResourceFieldsNode()
 			current.Children[part].Name = part
 		}
 		current = current.Children[part]
-		if current.OriginalPath == "" {
-			current.OriginalPath = strings.Join(parts[:i+1], ".")
+		if current.Path == "" {
+			current.Path = strings.Join(parts[:i+1], ".")
 		}
 	}
 }
