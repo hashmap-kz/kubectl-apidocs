@@ -25,6 +25,17 @@ type UIData struct {
 	OpenAPIClient   openapiclient.Client
 }
 
+type UIState struct {
+	app            *tview.Application
+	root           *tview.TreeNode
+	helpMenu       *tview.TextView
+	treeView       *tview.TreeView
+	detailsView    *tview.TextView
+	horizontalFlex *tview.Flex
+	mainLayout     *tview.Flex
+	inputField     *tview.InputField
+}
+
 func RunApp(uiData *UIData) error {
 	// Get API serverPreferredResources
 	serverPreferredResources, err := uiData.DiscoveryClient.ServerPreferredResources()
@@ -79,62 +90,38 @@ func RunApp(uiData *UIData) error {
 	detailsView.SetScrollable(true)
 	detailsView.SetWrap(true)
 
-	err = setupListeners(uiData, app, root, treeView, detailsView)
+	// Create a horizontal flex layout for left and right views
+	horizontalFlex := tview.NewFlex()
+	horizontalFlex.AddItem(treeView, 0, 1, true)
+	horizontalFlex.AddItem(detailsView, 0, 1, false)
+
+	// Create a vertical flex layout to organize help and horizontal views
+	mainLayout := tview.NewFlex()
+	mainLayout.SetDirection(tview.FlexRow)
+	mainLayout.AddItem(helpMenu, 4, 1, false)
+	mainLayout.AddItem(horizontalFlex, 0, 2, true)
+
+	// Create the input field (hidden by default)
+	inputField := tview.NewInputField()
+	inputField.SetLabel("Command: ")
+	inputField.SetFieldWidth(20)
+	inputField.SetBorder(true)
+
+	// Set up listeners for app state.
+	err = setupListeners(uiData, &UIState{
+		app:            app,
+		root:           root,
+		treeView:       treeView,
+		detailsView:    detailsView,
+		horizontalFlex: horizontalFlex,
+		mainLayout:     mainLayout,
+		inputField:     inputField,
+	})
 	if err != nil {
 		return err
 	}
 
-	// Create a horizontal flex layout for left and right views
-	horizontalFlex := tview.NewFlex().
-		AddItem(treeView, 0, 1, true).
-		AddItem(detailsView, 0, 1, false)
-
-	// Create a vertical flex layout to organize help and horizontal views
-	mainLayout := tview.NewFlex().
-		SetDirection(tview.FlexRow).
-		AddItem(helpMenu, 4, 1, false).
-		AddItem(horizontalFlex, 0, 2, true)
-
-	// Create the input field (hidden by default)
-	inputField := tview.NewInputField().
-		SetLabel("Command: ").
-		SetFieldWidth(20)
-
-	inputField.SetDoneFunc(func(key tcell.Key) {
-		if key == tcell.KeyEnter {
-			mainLayout.RemoveItem(inputField) // Hide the input field
-			app.SetFocus(treeView)            // Focus back to main layout
-		}
-	})
-	inputField.SetBorder(true)
-
-	// Set up application key events
-	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		// Show the input field on Shift+:
-		if event.Key() == tcell.KeyRune && event.Rune() == ':' {
-			mainLayout.AddItem(inputField, 3, 1, true) // Show the input field
-			app.SetFocus(inputField)                   // Focus on the input field
-			return nil                                 // Prevent further processing
-		}
-		// Quit the app on 'q'
-		if event.Rune() == 'q' {
-			app.Stop()
-		}
-		return event
-	})
-
-	// // Create a layout to arrange the UI components.
-	// layout := tview.NewFlex().
-	// 	SetDirection(tview.FlexRow).
-	// 	AddItem(
-	// 		tview.NewFlex().
-	// 			AddItem(treeView, 0, 1, true).
-	// 			AddItem(detailsView, 0, 1, false),
-	// 		0, 1, true,
-	// 	)
-
 	// Set up the app and start it.
-
 	if err := app.SetRoot(mainLayout, true).Run(); err != nil {
 		return err
 	}
@@ -144,27 +131,48 @@ func RunApp(uiData *UIData) error {
 
 func setupListeners(
 	uiData *UIData,
-	app *tview.Application,
-	root *tview.TreeNode,
-	treeView *tview.TreeView,
-	detailsView *tview.TextView,
+	uiState *UIState,
 ) error {
+	// To handle errors inside closures
 	var listenersErr error
 
 	// Stack to handle navigation back
 	var navigationStack []*tview.TreeNode
-	navigationStack = append(navigationStack, root)
+	navigationStack = append(navigationStack, uiState.root)
 
-	detailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	// Set up application key events
+	uiState.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Show the input field on Shift+:
+		if event.Key() == tcell.KeyRune && event.Rune() == ':' {
+			uiState.mainLayout.AddItem(uiState.inputField, 3, 1, true) // Show the input field
+			uiState.app.SetFocus(uiState.inputField)                   // Focus on the input field
+			return nil                                                 // Prevent further processing
+		}
+		// Quit the app on 'q'
+		if event.Rune() == 'q' {
+			uiState.app.Stop()
+		}
+		return event
+	})
+
+	// Command was set, process it, close input cmd, set focus onto the tree
+	uiState.inputField.SetDoneFunc(func(key tcell.Key) {
+		if key == tcell.KeyEnter {
+			uiState.mainLayout.RemoveItem(uiState.inputField) // Hide the input field
+			uiState.app.SetFocus(uiState.treeView)            // Focus back to main layout
+		}
+	})
+
+	uiState.detailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyTab {
-			app.SetFocus(treeView) // Switch focus to the TreeView
+			uiState.app.SetFocus(uiState.treeView) // Switch focus to the TreeView
 			return nil
 		}
 		return event
 	})
 
 	// Add key event handler for toggling node expansion
-	treeView.SetSelectedFunc(func(node *tview.TreeNode) {
+	uiState.treeView.SetSelectedFunc(func(node *tview.TreeNode) {
 		if node == nil {
 			return
 		}
@@ -183,7 +191,7 @@ func setupListeners(
 				return
 			}
 			navigationStack = append(navigationStack, node)
-			treeView.SetRoot(node).SetCurrentNode(node)
+			uiState.treeView.SetRoot(node).SetCurrentNode(node)
 			node.SetExpanded(true)
 		} else {
 			// just expand subtree
@@ -195,9 +203,9 @@ func setupListeners(
 	}
 
 	// Handle TAB key to switch focus between views
-	treeView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	uiState.treeView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyTab {
-			app.SetFocus(detailsView) // Switch focus to the DetailsView
+			uiState.app.SetFocus(uiState.detailsView) // Switch focus to the DetailsView
 			return nil
 		}
 
@@ -226,7 +234,7 @@ func setupListeners(
 
 			navigationStack = navigationStack[:len(navigationStack)-1]
 			prevNode := navigationStack[len(navigationStack)-1]
-			treeView.SetRoot(prevNode).SetCurrentNode(cur)
+			uiState.treeView.SetRoot(prevNode).SetCurrentNode(cur)
 			return nil
 		}
 
@@ -237,7 +245,7 @@ func setupListeners(
 	}
 
 	// Handle selection changes
-	treeView.SetChangedFunc(func(node *tview.TreeNode) {
+	uiState.treeView.SetChangedFunc(func(node *tview.TreeNode) {
 		if node == nil {
 			return
 		}
@@ -247,7 +255,7 @@ func setupListeners(
 			return
 		}
 
-		detailsView.SetText(data.path)
+		uiState.detailsView.SetText(data.path)
 		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
 			explainer := Explainer{
 				gvr:           *data.gvr,
@@ -257,7 +265,7 @@ func setupListeners(
 			buf := bytes.Buffer{}
 			err := explainer.Explain(&buf, data.path)
 			if err == nil {
-				detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
+				uiState.detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
 			}
 		}
 	})
