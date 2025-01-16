@@ -30,7 +30,7 @@ func NewAPIDocsOptions(streams genericiooptions.IOStreams) *APIDocsOptions {
 	}
 }
 
-func NewCmd() *cobra.Command {
+func NewCmdAPIDocs() *cobra.Command {
 	o := NewAPIDocsOptions(genericiooptions.IOStreams{
 		In:     os.Stdin,
 		Out:    os.Stdout,
