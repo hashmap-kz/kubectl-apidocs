@@ -3,6 +3,7 @@ package apidocs
 import (
 	"bytes"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -22,9 +23,11 @@ type UIData struct {
 	OpenAPIClient   openapiclient.Client
 }
 
-func RunApp(o *UIData) error {
+func RunApp(uiData *UIData) error {
+	var listenersErr error
+
 	// Get API resources
-	resources, err := o.DiscoveryClient.ServerPreferredResources()
+	resources, err := uiData.DiscoveryClient.ServerPreferredResources()
 	if err != nil {
 		return fmt.Errorf("error getting API resources: %v", err)
 	}
@@ -40,6 +43,149 @@ func RunApp(o *UIData) error {
 	// Sort the API groups with custom logic to prioritize apps/v1 and v1 at the top
 	customSortGroups(resources)
 
+	// Populate root node with groups/resources/fields
+	err = constructRootNode(root, uiData, resources)
+	if err != nil {
+		return err
+	}
+
+	// Create a main tree view (lhs)
+	treeView := tview.NewTreeView()
+	treeView.SetRoot(root)
+	treeView.SetCurrentNode(root)
+	treeView.SetGraphicsColor(tcell.ColorWhite)
+	treeView.SetTitle("Resources")
+	treeView.SetBorder(true)
+
+	// Create a main details view (rhs)
+	detailsView := tview.NewTextView()
+	detailsView.SetDynamicColors(true)
+	detailsView.SetBorder(true)
+	detailsView.SetTitle("Details")
+	detailsView.SetScrollable(true)
+	detailsView.SetWrap(true)
+
+	detailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			app.SetFocus(treeView) // Switch focus to the TreeView
+			return nil
+		}
+		return event
+	})
+
+	// Stack to handle navigation back
+	var navigationStack []*tview.TreeNode
+	navigationStack = append(navigationStack, root)
+
+	// Add key event handler for toggling node expansion
+	treeView.SetSelectedFunc(func(node *tview.TreeNode) {
+		if node == nil {
+			return
+		}
+
+		// open subview with a subtree
+		data, err := extractTreeData(node)
+		if err != nil {
+			listenersErr = err
+			return
+		}
+
+		if (data.nodeType == nodeTypeGroup || data.nodeType == nodeTypeResource) && !data.inPreview {
+			err := setInPreview(node, true)
+			if err != nil {
+				listenersErr = err
+				return
+			}
+			navigationStack = append(navigationStack, node)
+			treeView.SetRoot(node).SetCurrentNode(node)
+			node.SetExpanded(true)
+		} else {
+			// just expand subtree
+			node.SetExpanded(!node.IsExpanded())
+		}
+	})
+	if listenersErr != nil {
+		return listenersErr
+	}
+
+	// Handle TAB key to switch focus between views
+	treeView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			app.SetFocus(detailsView) // Switch focus to the DetailsView
+			return nil
+		}
+
+		// back to the root (step back) by ESC
+		if event.Key() == tcell.KeyEscape && len(navigationStack) > 1 {
+			// a node, that was used for preview, we need to clear the flag
+			cur := navigationStack[len(navigationStack)-1]
+			err := setInPreview(cur, false)
+			if err != nil {
+				listenersErr = err
+				return nil
+			}
+
+			navigationStack = navigationStack[:len(navigationStack)-1]
+			prevNode := navigationStack[len(navigationStack)-1]
+			treeView.SetRoot(prevNode).SetCurrentNode(cur)
+			return nil
+		}
+
+		return event
+	})
+	if listenersErr != nil {
+		return listenersErr
+	}
+
+	// Handle selection changes
+	treeView.SetChangedFunc(func(node *tview.TreeNode) {
+		if node == nil {
+			return
+		}
+		data, err := extractTreeData(node)
+		if err != nil {
+			listenersErr = err
+			return
+		}
+
+		detailsView.SetText(data.path)
+		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
+			explainer := Explainer{
+				gvr:           *data.gvr,
+				openAPIClient: uiData.OpenAPIClient,
+			}
+
+			buf := bytes.Buffer{}
+			err := explainer.Explain(&buf, data.path)
+			if err == nil {
+				detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
+			}
+		}
+	})
+	if listenersErr != nil {
+		return listenersErr
+	}
+
+	// Create a layout to arrange the UI components.
+	layout := tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(
+			tview.NewFlex().
+				AddItem(treeView, 0, 1, true).
+				AddItem(detailsView, 0, 1, false),
+			0, 1, true,
+		)
+
+	// Set up the app and start it.
+
+	if err := app.SetRoot(layout, true).Run(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func constructRootNode(root *tview.TreeNode, uiData *UIData, resources []*metav1.APIResourceList) error {
 	// Build the tree with API groups and resources
 	for _, group := range resources {
 		// Create a tree node for the API group
@@ -70,7 +216,7 @@ func RunApp(o *UIData) error {
 			gvr := gv.WithResource(resource.Name)
 
 			// fields+
-			paths, err := getPaths(o.RestMapper, o.OpenAPISchema, gvr)
+			paths, err := getPaths(uiData.RestMapper, uiData.OpenAPISchema, gvr)
 			if err != nil {
 				return err
 			}
@@ -79,15 +225,21 @@ func RunApp(o *UIData) error {
 			for _, fieldPath := range paths {
 				rootFieldsNode.AddPath(fieldPath)
 			}
-			tmpNode := tview.NewTreeNode("tmp")
-			addChildrenFields(tmpNode, rootFieldsNode.Children, &gvr)
-			firstChild := tmpNode.GetChildren()[0]
-			firstChild.SetText(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name))
-			if data, ok := firstChild.GetReference().(*TreeData); ok {
-				data.nodeType = nodeTypeResource
-				data.gvr = &gvr
-				firstChild.SetReference(data)
+			tempNode := tview.NewTreeNode("tmp")
+			populateNodeWithResourceFields(tempNode, rootFieldsNode.Children, &gvr)
+			if len(tempNode.GetChildren()) != 1 {
+				return fmt.Errorf("error when populating fields for tree node")
 			}
+			firstChild := tempNode.GetChildren()[0]
+			firstChild.SetText(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name))
+			// Customize first child, which is actually a root for the resource: deployment, statefulset, etc...
+			firstChildData, err := extractTreeData(firstChild)
+			if err != nil {
+				return err
+			}
+			firstChildData.nodeType = nodeTypeResource
+			firstChildData.gvr = &gvr
+			firstChild.SetReference(firstChildData)
 			// fields-
 
 			groupNode.AddChild(firstChild)
@@ -96,119 +248,10 @@ func RunApp(o *UIData) error {
 		// Add the group node as a child of the root node
 		root.AddChild(groupNode)
 	}
-
-	// Create a tree view to display the tree
-	treeView := tview.NewTreeView().
-		SetRoot(root).
-		SetCurrentNode(root).
-		SetGraphicsColor(tcell.ColorWhite)
-
-	treeView.SetTitle("Resources")
-	treeView.SetBorder(true)
-
-	// Create a TextView to display field details.
-	detailsView := tview.NewTextView()
-	detailsView.SetDynamicColors(true)
-	detailsView.SetBorder(true)
-	detailsView.SetTitle("Details")
-	detailsView.SetScrollable(true)
-	detailsView.SetWrap(true)
-
-	detailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyTab {
-			app.SetFocus(treeView) // Switch focus to the TreeView
-			return nil
-		}
-		return event
-	})
-
-	// Stack to handle navigation back
-	var stack []*tview.TreeNode
-	stack = append(stack, root)
-
-	// Add key event handler for toggling node expansion
-	treeView.SetSelectedFunc(func(node *tview.TreeNode) {
-		if node == nil {
-			return
-		}
-
-		// open subview with a subtree
-		data := getReference(node)
-
-		if (data.nodeType == nodeTypeGroup || data.nodeType == nodeTypeResource) && !data.inPreview {
-			setInPreview(node, true)
-			stack = append(stack, node)
-			treeView.SetRoot(node).SetCurrentNode(node)
-			node.SetExpanded(true)
-		} else {
-			// just expand subtree
-			node.SetExpanded(!node.IsExpanded())
-		}
-	})
-
-	// Handle TAB key to switch focus between views
-	treeView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyTab {
-			app.SetFocus(detailsView) // Switch focus to the DetailsView
-			return nil
-		}
-
-		// back to the root (step back) by ESC
-		if event.Key() == tcell.KeyEscape && len(stack) > 1 {
-			// a node, that was used for preview, we need to clear the flag
-			cur := stack[len(stack)-1]
-			setInPreview(cur, false)
-
-			stack = stack[:len(stack)-1]
-			prevNode := stack[len(stack)-1]
-			treeView.SetRoot(prevNode).SetCurrentNode(cur)
-			return nil
-		}
-
-		return event
-	})
-
-	// Handle selection changes
-	treeView.SetChangedFunc(func(node *tview.TreeNode) {
-		if node == nil {
-			return
-		}
-		data := getReference(node)
-		detailsView.SetText(data.path)
-		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
-			explainer := Explainer{
-				gvr:           *data.gvr,
-				openAPIClient: o.OpenAPIClient,
-			}
-
-			buf := bytes.Buffer{}
-			err := explainer.Explain(&buf, data.path)
-			if err == nil {
-				detailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
-			}
-		}
-	})
-
-	// Create a layout to arrange the UI components.
-	layout := tview.NewFlex().
-		SetDirection(tview.FlexRow).
-		AddItem(
-			tview.NewFlex().
-				AddItem(treeView, 0, 1, true).
-				AddItem(detailsView, 0, 1, false),
-			0, 1, true,
-		)
-
-	// Set up the app and start it.
-
-	if err := app.SetRoot(layout, true).Run(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func addChildrenFields(parent *tview.TreeNode, children map[string]*ResourceFieldsNode, gvr *schema.GroupVersionResource) {
+func populateNodeWithResourceFields(parent *tview.TreeNode, children map[string]*ResourceFieldsNode, gvr *schema.GroupVersionResource) {
 	if len(children) != 0 {
 		parent.SetText(parent.GetText() + " >")
 		parent.SetColor(tcell.ColorGreen)
@@ -229,7 +272,7 @@ func addChildrenFields(parent *tview.TreeNode, children map[string]*ResourceFiel
 		})
 		parent.AddChild(childNode)
 		if children[key].Children != nil {
-			addChildrenFields(childNode, children[key].Children, gvr)
+			populateNodeWithResourceFields(childNode, children[key].Children, gvr)
 		}
 	}
 }

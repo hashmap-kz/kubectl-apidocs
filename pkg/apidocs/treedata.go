@@ -1,8 +1,7 @@
 package apidocs
 
 import (
-	"log"
-
+	"fmt"
 	"github.com/rivo/tview"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -29,16 +28,19 @@ type TreeData struct {
 }
 
 // TODO: cleanup
-func getReference(node *tview.TreeNode) *TreeData {
+func extractTreeData(node *tview.TreeNode) (*TreeData, error) {
 	if data, ok := node.GetReference().(*TreeData); ok {
-		return data
+		return data, nil
 	}
-	log.Fatalf("unexpected. get-ref failed: %v", node)
-	return nil
+	return nil, fmt.Errorf("unexpected. get-ref failed: %v", node)
 }
 
-func setInPreview(node *tview.TreeNode, inPreview bool) {
-	data := getReference(node)
+func setInPreview(node *tview.TreeNode, inPreview bool) error {
+	data, err := extractTreeData(node)
+	if err != nil {
+		return err
+	}
 	data.inPreview = inPreview
 	node.SetReference(data)
+	return nil
 }
