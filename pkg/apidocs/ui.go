@@ -290,42 +290,11 @@ func populateRootNodeWithResources(root *tview.TreeNode, uiData *UIData, resourc
 		// Add resources as child nodes to the group node
 		for i := 0; i < len(resources); i++ {
 			resource := resources[i]
-
-			gv, err := schema.ParseGroupVersion(group.GroupVersion)
-			if err != nil {
-				continue
-			}
-			gvr := gv.WithResource(resource.Name)
-
-			// fields+
-			paths, err := getPaths(uiData.RestMapper, uiData.OpenAPISchema, gvr)
+			resourceNode, err := createResourceNodeWithAllFieldsSet(group, &resource, uiData)
 			if err != nil {
 				return err
 			}
-
-			rootFieldsNode := &ResourceFieldsNode{Name: "root"}
-			for _, fieldPath := range paths {
-				rootFieldsNode.AddPath(fieldPath)
-			}
-			tempNode := tview.NewTreeNode("tmp")
-			populateNodeWithResourceFields(tempNode, rootFieldsNode.Children, &gvr)
-			if len(tempNode.GetChildren()) != 1 {
-				return fmt.Errorf("error when populating fields for tree node")
-			}
-			firstChild := tempNode.GetChildren()[0]
-			firstChild.SetColor(tcell.ColorBlue)
-			firstChild.SetText(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name))
-			// Customize first child, which is actually a root for the resource: deployment, statefulset, etc...
-			firstChildData, err := extractTreeData(firstChild)
-			if err != nil {
-				return err
-			}
-			firstChildData.nodeType = nodeTypeResource
-			firstChildData.gvr = &gvr
-			firstChild.SetReference(firstChildData)
-			// fields-
-
-			groupNode.AddChild(firstChild)
+			groupNode.AddChild(resourceNode)
 		}
 
 		// Add the group node as a child of the root node
@@ -334,7 +303,58 @@ func populateRootNodeWithResources(root *tview.TreeNode, uiData *UIData, resourc
 	return nil
 }
 
-func populateNodeWithResourceFields(parent *tview.TreeNode, children map[string]*ResourceFieldsNode, gvr *schema.GroupVersionResource) {
+func createResourceNodeWithAllFieldsSet(
+	group *metav1.APIResourceList,
+	resource *metav1.APIResource,
+	uiData *UIData,
+) (*tview.TreeNode, error) {
+	gv, err := schema.ParseGroupVersion(group.GroupVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	gvr := gv.WithResource(resource.Name)
+
+	paths, err := getPaths(uiData.RestMapper, uiData.OpenAPISchema, gvr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create internal tree from a given paths
+	rootFieldsNode := &ResourceFieldsNode{Name: "root"}
+	for _, fieldPath := range paths {
+		rootFieldsNode.AddPath(fieldPath)
+	}
+
+	// Convert internal tree to a tree-view
+	tempNode := tview.NewTreeNode("tmp")
+	populateNodeWithResourceFields(tempNode, rootFieldsNode.Children, &gvr)
+	if len(tempNode.GetChildren()) != 1 {
+		return nil, fmt.Errorf("error when populating fields for tree node")
+	}
+
+	// Fetch the result after conversion
+	resourceNodeTreeView := tempNode.GetChildren()[0]
+	resourceNodeTreeView.SetColor(tcell.ColorBlue)
+	resourceNodeTreeView.SetText(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name))
+
+	// Customize node internal data
+	resourceNodeData, err := extractTreeData(resourceNodeTreeView)
+	if err != nil {
+		return nil, err
+	}
+	resourceNodeData.nodeType = nodeTypeResource
+	resourceNodeData.gvr = &gvr
+	resourceNodeTreeView.SetReference(resourceNodeData)
+
+	return resourceNodeTreeView, nil
+}
+
+func populateNodeWithResourceFields(
+	parent *tview.TreeNode,
+	children map[string]*ResourceFieldsNode,
+	gvr *schema.GroupVersionResource,
+) {
 	if len(children) != 0 {
 		parent.SetText(parent.GetText() + " >")
 		parent.SetColor(tcell.ColorGreen)
