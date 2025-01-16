@@ -259,6 +259,7 @@ func populateRootNodeWithResources(root *tview.TreeNode, uiData *UIData, resourc
 				return fmt.Errorf("error when populating fields for tree node")
 			}
 			firstChild := tempNode.GetChildren()[0]
+			firstChild.SetColor(tcell.ColorBlue)
 			firstChild.SetText(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name))
 			// Customize first child, which is actually a root for the resource: deployment, statefulset, etc...
 			firstChildData, err := extractTreeData(firstChild)
