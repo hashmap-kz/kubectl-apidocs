@@ -55,7 +55,6 @@ func RunApp(uiData *UIData) error {
 
 	// Create the root tree node
 	apiResourcesRootNode := tview.NewTreeNode("API Resources").
-		SetColor(tcell.ColorYellow).
 		SetReference(&TreeData{nodeType: nodeTypeRoot})
 
 	// Sort the API groups with custom logic to prioritize apps/v1 and v1 at the top
@@ -121,6 +120,9 @@ func RunApp(uiData *UIData) error {
 		return err
 	}
 
+	// Set colors
+	resetNodeColors(apiResourcesRootNode)
+
 	// Set up the app and start it.
 	if err := app.SetRoot(mainLayout, true).Run(); err != nil {
 		return err
@@ -138,7 +140,6 @@ func populateRootNodeWithResources(
 	for _, group := range serverPreferredResources {
 		// Create a tree node for the API group
 		groupNode := tview.NewTreeNode(group.GroupVersion).
-			SetColor(tcell.ColorGreen).
 			SetReference(&TreeData{nodeType: nodeTypeGroup})
 
 		// Sort the resources inside each group alphabetically
@@ -201,7 +202,6 @@ func createResourceNodeWithAllFieldsSet(
 
 	// Fetch the result after conversion
 	resourceNodeTreeView := tempNode.GetChildren()[0]
-	resourceNodeTreeView.SetColor(tcell.ColorBlue)
 	resourceNodeTreeView.SetText(fmt.Sprintf("%s (%s)", resource.Kind, resource.Name))
 
 	// Customize node internal data
@@ -223,7 +223,6 @@ func populateNodeWithResourceFields(
 ) {
 	if len(children) != 0 {
 		parent.SetText(parent.GetText() + " >")
-		parent.SetColor(tcell.ColorGreen)
 		parent.SetExpanded(!parent.IsExpanded())
 	}
 
