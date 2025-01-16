@@ -157,7 +157,8 @@ func setupListenersForCmdInput(uiState *UIState) error {
 		if key == tcell.KeyEnter {
 			if uiState.cmdInputIsOn && uiState.cmdInputPurpose == cmdInputPurposeSearch {
 				searchTerm := uiState.cmdInput.GetText()
-				highlightMatchingNodes(uiState.apiResourcesRootNode, searchTerm)
+				// TODO: search inside current node parent
+				highlightMatchingNodes(uiState, uiState.apiResourcesRootNode, searchTerm)
 			}
 
 			uiState.cmdInput.SetText("")
@@ -196,10 +197,11 @@ func setupListenersForApp(uiState *UIState) error {
 			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
 			return nil                                               // Prevent further processing
 		}
+		// TODO: quit on <:q>
 		// Quit the app on 'q'
-		if event.Rune() == 'q' {
-			uiState.app.Stop()
-		}
+		//if event.Rune() == 'q' {
+		//	uiState.app.Stop()
+		//}
 		return event
 	})
 	return nil
