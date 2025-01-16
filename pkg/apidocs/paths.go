@@ -25,14 +25,14 @@ func getPaths(restMapper meta.RESTMapper,
 	if err != nil {
 		return nil, err
 	}
-	s := openAPISchema.LookupResource(gvk)
-	if s == nil {
+	protoSchema := openAPISchema.LookupResource(gvk)
+	if protoSchema == nil {
 		return nil, err
 	}
-	s.Accept(visitor)
+	protoSchema.Accept(visitor)
 	if visitor.err != nil {
 		return nil, err
 	}
-	visitorPathsResult := visitor.listPaths()
+	visitorPathsResult := visitor.getVisitedPaths()
 	return visitorPathsResult, nil
 }

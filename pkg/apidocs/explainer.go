@@ -11,8 +11,8 @@ import (
 )
 
 type Explainer struct {
-	gvr             schema.GroupVersionResource
-	openAPIV3Client openapiclient.Client
+	gvr           schema.GroupVersionResource
+	openAPIClient openapiclient.Client
 }
 
 func (e Explainer) Explain(w io.Writer, path string) error {
@@ -28,7 +28,7 @@ func (e Explainer) Explain(w io.Writer, path string) error {
 	return explainv2.PrintModelDescription(
 		fields,
 		w,
-		e.openAPIV3Client,
+		e.openAPIClient,
 		e.gvr,
 		false,
 		"plaintext",

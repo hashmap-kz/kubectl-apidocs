@@ -44,8 +44,13 @@ func (o *Options) RunApp() {
 			continue
 		}
 
+		// lint: rangeValCopy
+		resources := group.APIResources
+
 		// Add resources as child nodes to the group node
-		for _, resource := range group.APIResources {
+		for i := 0; i < len(resources); i++ {
+			resource := resources[i]
+
 			gv, err := schema.ParseGroupVersion(group.GroupVersion)
 			if err != nil {
 				continue
@@ -120,12 +125,8 @@ func (o *Options) RunApp() {
 
 		if (data.nodeType == nodeTypeGroup || data.nodeType == nodeTypeResource) && !data.inPreview {
 			setInPreview(node, true)
-
 			stack = append(stack, node)
-
-			treeView.SetRoot(node).
-				SetCurrentNode(node)
-
+			treeView.SetRoot(node).SetCurrentNode(node)
 			node.SetExpanded(true)
 		} else {
 			// just expand subtree
@@ -148,8 +149,7 @@ func (o *Options) RunApp() {
 
 			stack = stack[:len(stack)-1]
 			prevNode := stack[len(stack)-1]
-			treeView.SetRoot(prevNode).
-				SetCurrentNode(cur)
+			treeView.SetRoot(prevNode).SetCurrentNode(cur)
 			return nil
 		}
 
@@ -165,8 +165,8 @@ func (o *Options) RunApp() {
 		detailsView.SetText(data.path)
 		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
 			explainer := Explainer{
-				gvr:             *data.gvr,
-				openAPIV3Client: o.openAPIClient,
+				gvr:           *data.gvr,
+				openAPIClient: o.openAPIClient,
 			}
 
 			buf := bytes.Buffer{}

@@ -56,7 +56,7 @@ func (v *schemaVisitor) VisitMap(m *proto.Map) {
 	m.SubType.Accept(v)
 }
 
-func (v *schemaVisitor) listPaths() []string {
+func (v *schemaVisitor) getVisitedPaths() []string {
 	paths := make([]string, 0, len(v.pathSchema))
 	for path := range v.pathSchema {
 		paths = append(paths, path)
