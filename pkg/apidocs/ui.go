@@ -64,7 +64,7 @@ func RunApp(uiData *UIData) error {
 	detailsView.SetScrollable(true)
 	detailsView.SetWrap(true)
 
-	err = setupLIsteners(uiData, app, root, treeView, detailsView)
+	err = setupListeners(uiData, app, root, treeView, detailsView)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,13 @@ func RunApp(uiData *UIData) error {
 	return nil
 }
 
-func setupLIsteners(uiData *UIData, app *tview.Application, root *tview.TreeNode, treeView *tview.TreeView, detailsView *tview.TextView) error {
+func setupListeners(
+	uiData *UIData,
+	app *tview.Application,
+	root *tview.TreeNode,
+	treeView *tview.TreeView,
+	detailsView *tview.TextView,
+) error {
 	var listenersErr error
 
 	// Stack to handle navigation back
