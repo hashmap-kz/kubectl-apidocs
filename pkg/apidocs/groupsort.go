@@ -10,13 +10,13 @@ import (
 func customSortGroups(groups []*metav1.APIResourceList) {
 	// Prioritize these groups at the top
 	topLevels := []string{
-		"apps/v1",
 		"v1",
-		"batch/v1",
-		"rbac.authorization.k8s.io/v1",
-		"networking.k8s.io/v1",
-		"gateway.networking.k8s.io/v1",
-		"gateway.networking.k8s.io/v1beta1",
+		"apps/v1",
+		// "batch/v1",
+		// "rbac.authorization.k8s.io/v1",
+		// "networking.k8s.io/v1",
+		// "gateway.networking.k8s.io/v1",
+		// "gateway.networking.k8s.io/v1beta1",
 	}
 
 	sort.SliceStable(groups, func(i, j int) bool {
