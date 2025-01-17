@@ -62,13 +62,9 @@ func resetNodeColors(node *tview.TreeNode) {
 	case nodeTypeGroup:
 		node.SetColor(tcell.ColorGreen)
 	case nodeTypeResource:
-		node.SetColor(tcell.ColorBlue)
+		node.SetColor(tcell.ColorSteelBlue)
 	case nodeTypeField:
-		if len(node.GetChildren()) > 0 {
-			node.SetColor(tcell.ColorGreen)
-		} else {
-			node.SetColor(tcell.ColorWhite)
-		}
+		node.SetColor(tcell.ColorLightGray)
 	default:
 		node.SetColor(tcell.ColorLightGray)
 	}

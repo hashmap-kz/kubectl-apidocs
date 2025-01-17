@@ -88,6 +88,7 @@ func RunApp(uiData *UIData) error {
 	apiResourcesDetailsView.SetTitle("Details")
 	apiResourcesDetailsView.SetScrollable(true)
 	apiResourcesDetailsView.SetWrap(true)
+	apiResourcesDetailsView.SetTextColor(tcell.ColorLightGray)
 
 	// Create a horizontal flex layout for resources-tree-view and resources-details-view
 	apiResourcesViewsLayout := tview.NewFlex()
