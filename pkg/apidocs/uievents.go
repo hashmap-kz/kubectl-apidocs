@@ -157,7 +157,6 @@ func setupListenersForCmdInput(uiState *UIState) error {
 		if key == tcell.KeyEnter {
 			if uiState.cmdInputIsOn && uiState.cmdInputPurpose == cmdInputPurposeSearch {
 				searchTerm := uiState.cmdInput.GetText()
-				// TODO: search inside current node parent
 				currentNode := uiState.apiResourcesTreeView.GetCurrentNode()
 				closestParentThatHasChildren := getClosestParentThatHasChildren(uiState, currentNode)
 				highlightMatchingNodes(uiState, closestParentThatHasChildren, searchTerm)

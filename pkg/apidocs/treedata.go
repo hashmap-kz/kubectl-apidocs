@@ -28,7 +28,6 @@ type TreeData struct {
 	gvr  *schema.GroupVersionResource
 }
 
-// TODO: cleanup
 func extractTreeData(node *tview.TreeNode) (*TreeData, error) {
 	if data, ok := node.GetReference().(*TreeData); ok {
 		return data, nil
