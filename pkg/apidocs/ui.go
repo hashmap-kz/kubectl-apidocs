@@ -41,6 +41,7 @@ type UIState struct {
 	cmdInput                *tview.InputField
 	cmdInputIsOn            bool
 	cmdInputPurpose         cmdInputPurpose
+	treeLinks               *TreeLinks
 }
 
 func RunApp(uiData *UIData) error {
@@ -107,6 +108,10 @@ func RunApp(uiData *UIData) error {
 	cmdInput.SetFieldWidth(20)
 	cmdInput.SetBorder(true)
 
+	// parent/child relationships (used for searching)
+	treeLinks := NewTreeLinks()
+	treeLinks.FillLinks(apiResourcesRootNode)
+
 	// Set up listeners for app state.
 	err = setupListeners(uiData, &UIState{
 		app:                     app,
@@ -116,6 +121,7 @@ func RunApp(uiData *UIData) error {
 		apiResourcesViewsLayout: apiResourcesViewsLayout,
 		mainLayout:              mainLayout,
 		cmdInput:                cmdInput,
+		treeLinks:               treeLinks,
 	})
 	if err != nil {
 		return err

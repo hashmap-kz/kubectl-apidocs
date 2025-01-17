@@ -158,7 +158,9 @@ func setupListenersForCmdInput(uiState *UIState) error {
 			if uiState.cmdInputIsOn && uiState.cmdInputPurpose == cmdInputPurposeSearch {
 				searchTerm := uiState.cmdInput.GetText()
 				// TODO: search inside current node parent
-				highlightMatchingNodes(uiState, uiState.apiResourcesRootNode, searchTerm)
+				currentNode := uiState.apiResourcesTreeView.GetCurrentNode()
+				closestParentThatHasChildren := getClosestParentThatHasChildren(uiState, currentNode)
+				highlightMatchingNodes(uiState, closestParentThatHasChildren, searchTerm)
 			}
 
 			uiState.cmdInput.SetText("")
@@ -169,6 +171,18 @@ func setupListenersForCmdInput(uiState *UIState) error {
 	})
 
 	return nil
+}
+
+func getClosestParentThatHasChildren(uiState *UIState, node *tview.TreeNode) *tview.TreeNode {
+	parentMap := uiState.treeLinks.ParentMap
+	for node != nil {
+		parent := parentMap[node]
+		if parent != nil && len(parent.GetChildren()) > 0 {
+			return parent
+		}
+		node = parent
+	}
+	return uiState.apiResourcesRootNode
 }
 
 func setupListenersForApp(uiState *UIState) error {

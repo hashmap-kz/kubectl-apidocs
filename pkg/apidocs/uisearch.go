@@ -11,7 +11,7 @@ import (
 func highlightMatchingNodes(uiState *UIState, root *tview.TreeNode, searchTerm string) {
 	if searchTerm == "" {
 		// Reset all nodes to their default color
-		resetNodeColors(root)
+		resetNodeColors(uiState.apiResourcesRootNode)
 		return
 	}
 
