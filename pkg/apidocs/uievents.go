@@ -53,7 +53,7 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 			return
 		}
 
-		if (data.nodeType == nodeTypeGroup || data.nodeType == nodeTypeResource) && !data.inPreview {
+		if data.IsNodeType(nodeTypeGroup, nodeTypeResource) && !data.inPreview {
 			err := setInPreview(node, true)
 			if err != nil {
 				listenersErr = err
@@ -93,11 +93,11 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 				return nil
 			}
 			// don't need to expand the resource, we need just its name
-			if data.nodeType == nodeTypeResource {
+			if data.IsNodeType(nodeTypeResource) {
 				cur.SetExpanded(false)
 			}
 			// always expand groups
-			if data.nodeType == nodeTypeGroup {
+			if data.IsNodeType(nodeTypeGroup) {
 				cur.SetExpanded(true)
 			}
 
@@ -125,7 +125,7 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 		}
 
 		uiState.apiResourcesDetailsView.SetText(data.path)
-		if data.nodeType == nodeTypeField || data.nodeType == nodeTypeResource {
+		if data.IsNodeType(nodeTypeField, nodeTypeResource) {
 			explainer := NewExplainer(*data.gvr, uiData.OpenAPIClient)
 			buf := bytes.Buffer{}
 			err := explainer.Explain(&buf, data.path)

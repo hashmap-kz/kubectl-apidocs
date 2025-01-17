@@ -45,6 +45,11 @@ func setInPreview(node *tview.TreeNode, inPreview bool) error {
 	return nil
 }
 
-func (d *TreeData) IsNodeType(t TreeDataNodeType) bool {
-	return d.nodeType == t
+func (d *TreeData) IsNodeType(nodeTypes ...TreeDataNodeType) bool {
+	for _, t := range nodeTypes {
+		if d.nodeType == t {
+			return true
+		}
+	}
+	return false
 }

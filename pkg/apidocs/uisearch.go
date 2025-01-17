@@ -29,7 +29,7 @@ func searchAndHighlight(node *tview.TreeNode, searchTerm string) {
 		return
 	}
 	// Check if the node's text contains the search term
-	shouldHighlight := data.IsNodeType(nodeTypeResource) || data.IsNodeType(nodeTypeField)
+	shouldHighlight := data.IsNodeType(nodeTypeResource, nodeTypeField)
 	if strings.Contains(strings.ToLower(node.GetText()), searchTerm) && shouldHighlight {
 		node.SetColor(tcell.ColorRed) // Highlight matching node
 		// TODO: set current node properly here
