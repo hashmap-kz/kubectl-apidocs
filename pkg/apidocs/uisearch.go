@@ -16,11 +16,11 @@ func highlightMatchingNodes(uiState *UIState, root *tview.TreeNode, searchTerm s
 	}
 
 	// Recursively search and highlight nodes
-	searchAndHighlight(uiState, root, strings.ToLower(searchTerm))
+	searchAndHighlight(root, strings.ToLower(searchTerm))
 }
 
 // Recursive function to search and highlight nodes
-func searchAndHighlight(uiState *UIState, node *tview.TreeNode, searchTerm string) {
+func searchAndHighlight(node *tview.TreeNode, searchTerm string) {
 	if node == nil {
 		return
 	}
@@ -42,7 +42,7 @@ func searchAndHighlight(uiState *UIState, node *tview.TreeNode, searchTerm strin
 
 	// Recursively check all children
 	for _, child := range node.GetChildren() {
-		searchAndHighlight(uiState, child, searchTerm)
+		searchAndHighlight(child, searchTerm)
 	}
 }
 

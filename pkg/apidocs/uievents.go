@@ -212,9 +212,9 @@ func setupListenersForApp(uiState *UIState) error {
 		}
 		// TODO: quit on <:q>
 		// Quit the app on 'q'
-		//if event.Rune() == 'q' {
-		//	uiState.app.Stop()
-		//}
+		// if event.Rune() == 'q' {
+		// 	uiState.app.Stop()
+		// }
 		return event
 	})
 	return nil
