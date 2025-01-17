@@ -44,3 +44,7 @@ func setInPreview(node *tview.TreeNode, inPreview bool) error {
 	node.SetReference(data)
 	return nil
 }
+
+func (d *TreeData) IsNodeType(t TreeDataNodeType) bool {
+	return d.nodeType == t
+}
