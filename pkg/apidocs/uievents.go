@@ -155,11 +155,20 @@ func setupListenersForCmdInput(uiState *UIState) error {
 	// Command was set, process it, close input cmd, set focus onto the tree
 	uiState.cmdInput.SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEnter {
+			// search
 			if uiState.cmdInputIsOn && uiState.cmdInputPurpose == cmdInputPurposeSearch {
 				searchTerm := uiState.cmdInput.GetText()
 				currentNode := uiState.apiResourcesTreeView.GetCurrentNode()
 				closestParentThatHasChildren := getClosestParentThatHasChildren(uiState, currentNode)
 				highlightMatchingNodes(uiState, closestParentThatHasChildren, searchTerm)
+			}
+
+			// quit
+			if uiState.cmdInputIsOn && uiState.cmdInputPurpose == cmdInputPurposeCmd {
+				cmd := uiState.cmdInput.GetText()
+				if cmd == "q" {
+					uiState.app.Stop()
+				}
 			}
 
 			uiState.cmdInput.SetText("")
@@ -210,11 +219,6 @@ func setupListenersForApp(uiState *UIState) error {
 			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
 			return nil                                               // Prevent further processing
 		}
-		// TODO: quit on <:q>
-		// Quit the app on 'q'
-		// if event.Rune() == 'q' {
-		// 	uiState.app.Stop()
-		// }
 		return event
 	})
 	return nil
