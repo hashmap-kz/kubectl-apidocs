@@ -9,8 +9,6 @@ import (
 	"k8s.io/kubectl/pkg/util/openapi"
 )
 
-// TODO: cache somehow
-
 func getPaths(restMapper meta.RESTMapper,
 	openAPISchema openapi.Resources,
 	gvr schema.GroupVersionResource,
