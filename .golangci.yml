@@ -111,7 +111,7 @@ linters-settings:
     allow-unused: false
     # Disable to ensure that nolint directives don't have a leading space. Default is true.
     # TODO(lint): Enforce machine-readable `nolint` directives
-    allow-leading-space: true
+    # allow-leading-space: true
     # Exclude following linters from requiring an explanation.  Default is [].
     allow-no-explanation: []
     # Enable to require an explanation of nonzero length after each nolint directive. Default is false.
