@@ -1,0 +1,41 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: apidocs
+spec:
+  version: {{ .TagName }}
+  homepage: https://github.com/hashmap-kz/kubectl-apidocs
+  shortDescription: Research API resources in a tree view format.
+  description: |
+    A tool that displays kubectl API resources in a tree view.
+  platforms:
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+    {{addURIAndSha "https://github.com/hashmap-kz/kubectl-apidocs/releases/download/{{ .TagName }}/kubectl-apidocs_{{ .TagName }}_darwin_amd64.tar.gz" .TagName }}
+    bin: kubectl-apidocs
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: arm64
+    {{addURIAndSha "https://github.com/hashmap-kz/kubectl-apidocs/releases/download/{{ .TagName }}/kubectl-apidocs_{{ .TagName }}_darwin_arm64.tar.gz" .TagName }}
+    bin: kubectl-apidocs
+  - selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+    {{addURIAndSha "https://github.com/hashmap-kz/kubectl-apidocs/releases/download/{{ .TagName }}/kubectl-apidocs_{{ .TagName }}_linux_amd64.tar.gz" .TagName }}
+    bin: kubectl-apidocs
+  - selector:
+      matchLabels:
+        os: linux
+        arch: arm64
+    {{addURIAndSha "https://github.com/hashmap-kz/kubectl-apidocs/releases/download/{{ .TagName }}/kubectl-apidocs_{{ .TagName }}_linux_arm64.tar.gz" .TagName }}
+    bin: kubectl-apidocs
+  - selector:
+      matchLabels:
+        os: windows
+        arch: amd64
+    {{addURIAndSha "https://github.com/hashmap-kz/kubectl-apidocs/releases/download/{{ .TagName }}/kubectl-apidocs_{{ .TagName }}_windows_amd64.tar.gz" .TagName }}
+    bin: kubectl-apidocs.exe

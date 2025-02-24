@@ -1,0 +1,44 @@
+version: 2
+
+before:
+  hooks:
+    - go mod download
+
+builds:
+  - id: kubectl-apidocs
+    main: ./cmd/kubectl-apidocs
+    binary: kubectl-apidocs
+    ldflags:
+      - -s -w
+      - -X github.com/hashmap-kz/kubectl-apidocs/pkg/version.Version={{.Version}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+checksum:
+  name_template: checksums.txt
+
+archives:
+  - builds:
+      - kubectl-apidocs
+    name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    wrap_in_directory: "false"
+    format: tar.gz
+    files:
+      - LICENSE
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
