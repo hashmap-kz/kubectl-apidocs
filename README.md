@@ -2,13 +2,6 @@
 
 _A `kubectl` plugin for learning about API resource documentation in a tree view format._
 
---- 
-
-## Examples
-
-Here's a **`kubectl apidocs`** demo:
-![apidocs demo GIF](assets/apidocs-demo.gif)
-
 ---
 
 ## **Installation**
@@ -47,6 +40,13 @@ Here's a **`kubectl apidocs`** demo:
    ```bash
    kubectl apidocs --version
    ```
+
+--- 
+
+## Examples
+
+![Main View](assets/01.png)
+![Expanded Resource](assets/02.png)
 
 ---
 
