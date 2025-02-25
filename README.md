@@ -39,7 +39,7 @@ Here's a **`kubectl apidocs`** demo:
      ARCH="$(uname -m | sed -e 's/x86_64/amd64/' -e 's/\(arm\)\(64\)\?.*/\1\2/' -e 's/aarch64$/arm64/')"
      TAG="$(curl -s https://api.github.com/repos/hashmap-kz/kubectl-apidocs/releases/latest | jq -r .tag_name)"
 
-     curl -L "https://github.com/hashmap-kz/kubectl-apidocs/releases/download/${TAG}/kubectl-envsubst_${TAG}_${OS}_${ARCH}.tar.gz" |
+     curl -L "https://github.com/hashmap-kz/kubectl-apidocs/releases/download/${TAG}/kubectl-apidocs_${TAG}_${OS}_${ARCH}.tar.gz" |
        tar -xzf - -C /usr/local/bin && chmod +x /usr/local/bin/kubectl-apidocs
    )
    ```
