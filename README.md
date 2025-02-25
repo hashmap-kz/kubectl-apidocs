@@ -2,8 +2,6 @@
 
 _A `kubectl` plugin for learning about API resource documentation in a tree view format._
 
----
-
 [![License](https://img.shields.io/github/license/hashmap-kz/kubectl-apidocs)](https://github.com/hashmap-kz/kubectl-apidocs/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hashmap-kz/kubectl-apidocs)](https://goreportcard.com/report/github.com/hashmap-kz/kubectl-apidocs)
 [![Workflow Status](https://img.shields.io/github/actions/workflow/status/hashmap-kz/kubectl-apidocs/ci.yml?branch=master)](https://github.com/hashmap-kz/kubectl-apidocs/actions/workflows/ci.yml?query=branch:master)
