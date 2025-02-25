@@ -107,6 +107,10 @@ func RunApp(uiData *UIData) error {
 	cmdInput.SetLabel("Command: ")
 	cmdInput.SetFieldWidth(32)
 	cmdInput.SetBorder(true)
+	cmdInput.SetFieldTextColor(tcell.ColorLightGray)
+	cmdInput.SetBackgroundColor(tcell.ColorBlack)
+	cmdInput.SetLabelColor(tcell.ColorYellow)
+	cmdInput.SetFieldBackgroundColor(tcell.ColorBlack)
 
 	// parent/child relationships (used for searching)
 	treeLinks := NewTreeLinks()
