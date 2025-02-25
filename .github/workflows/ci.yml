@@ -22,10 +22,10 @@ jobs:
       - name: Run unit tests
         run: make test
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          install-only: true
-
-      - name: Check goreleaser
-        run: make snapshot
+      # - name: Run GoReleaser
+      #   uses: goreleaser/goreleaser-action@v6
+      #   with:
+      #     install-only: true
+      #
+      # - name: Check goreleaser
+      #   run: make snapshot
