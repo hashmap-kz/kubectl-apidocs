@@ -22,7 +22,7 @@ Here's a **`kubectl apidocs`** demo:
    ```
 3. Verify installation:
    ```bash
-   kubectl apidocs --version
+   kubectl apidocs
    ```
 
 ### Manual Installation
@@ -45,7 +45,7 @@ Here's a **`kubectl apidocs`** demo:
    ```
 4. Verify installation:
    ```bash
-   kubectl apidocs --version
+   kubectl apidocs
    ```
 
 ---
