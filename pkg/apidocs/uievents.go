@@ -41,6 +41,7 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 	navigationStack = append(navigationStack, uiState.apiResourcesRootNode)
 
 	// Add key event handler for toggling node expansion
+	// Handle <ENTER>
 	uiState.apiResourcesTreeView.SetSelectedFunc(func(node *tview.TreeNode) {
 		if node == nil {
 			return
@@ -71,11 +72,34 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 		return listenersErr
 	}
 
-	// Handle TAB key to switch focus between views
+	// Handle event keys: tab/h/l/ESC etc...
 	uiState.apiResourcesTreeView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Handle TAB key to switch focus between views
 		if event.Key() == tcell.KeyTab {
 			uiState.app.SetFocus(uiState.apiResourcesDetailsView) // Switch focus to the DetailsView
 			return nil
+		}
+
+		// h/l -> collapse/expand
+		// left-arrow/right-arrow -> collapse/expand
+		// NOTE: expand fields only, ignore groups and resources (they're managed by ENTER)
+		if (event.Key() == tcell.KeyRune && event.Rune() == 'h') || event.Key() == tcell.KeyLeft {
+			curNode := uiState.apiResourcesTreeView.GetCurrentNode()
+			data, err := extractTreeData(curNode)
+			if err == nil {
+				if data.IsNodeType(nodeTypeField) {
+					curNode.SetExpanded(false)
+				}
+			}
+		}
+		if (event.Key() == tcell.KeyRune && event.Rune() == 'l') || event.Key() == tcell.KeyRight {
+			curNode := uiState.apiResourcesTreeView.GetCurrentNode()
+			data, err := extractTreeData(curNode)
+			if err == nil {
+				if data.IsNodeType(nodeTypeField) {
+					curNode.SetExpanded(true)
+				}
+			}
 		}
 
 		// back to the root (step back) by ESC
