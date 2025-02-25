@@ -9,7 +9,7 @@ _A `kubectl` plugin for learning about API resource documentation in a tree view
 [![Go Version](https://img.shields.io/github/go-mod/go-version/hashmap-kz/kubectl-apidocs)](https://github.com/hashmap-kz/kubectl-apidocs/blob/master/go.mod#L3)
 [![Latest Release](https://img.shields.io/github/v/release/hashmap-kz/kubectl-apidocs)](https://github.com/hashmap-kz/kubectl-apidocs/releases/latest)
 
---- 
+---
 
 ## Examples
 
@@ -38,6 +38,7 @@ Here's a **`kubectl apidocs`** demo:
    the [Releases page](https://github.com/hashmap-kz/kubectl-apidocs/releases).
 2. Place the binary in your system's `PATH` (e.g., `/usr/local/bin`).
 3. Example installation script for Unix-Based OS:
+
    ```bash
    (
      set -euo pipefail
@@ -50,10 +51,35 @@ Here's a **`kubectl apidocs`** demo:
        tar -xzf - -C /usr/local/bin && chmod +x /usr/local/bin/kubectl-apidocs
    )
    ```
+
 4. Verify installation:
    ```bash
    kubectl apidocs
    ```
+
+---
+
+## Terminal Navigation Guide
+
+### 🖥️ **Keyboard Shortcuts**
+
+| **Shortcut**   | **Action**                                                           |
+| -------------- | -------------------------------------------------------------------- |
+| **`<hjkl>`**   | Navigate (Vim-style)                                                 |
+| **`<ARROWS>`** | Navigate (Arrow keys)                                                |
+| **`<ENTER>`**  | Select (group/resource)                                              |
+| **`<TAB>`**    | Switch focus between tree/details (NOTE: details-view is scrollable) |
+| **`<ESC>`**    | Step back in navigation                                              |
+| **`/`**        | Open search mode                                                     |
+| **`<:cmd>`**   | Execute a command                                                    |
+| **`<ctrl-c>`** | Quit application                                                     |
+
+---
+
+### 🚀 **Tips for Efficient Navigation**
+
+- **Use `hjkl` for fast movement** (Vim-style navigation).
+- **`TAB` lets you quickly switch between tree-view and details (NOTE: details-view is scrollable)**.
 
 ---
 
