@@ -233,7 +233,7 @@ func getClosestParentThatHasChildren(uiState *UIState, node *tview.TreeNode) *tv
 func setupListenersForApp(uiState *UIState) error {
 	// Set up application key events
 	uiState.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		// Show the input field on Shift+:
+		// search input
 		if event.Key() == tcell.KeyRune && event.Rune() == '/' {
 			if uiState.cmdInputIsOn {
 				return nil
@@ -245,6 +245,8 @@ func setupListenersForApp(uiState *UIState) error {
 			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
 			return nil                                               // Prevent further processing
 		}
+
+		// command input
 		if event.Key() == tcell.KeyRune && event.Rune() == ':' {
 			if uiState.cmdInputIsOn {
 				return nil
@@ -256,6 +258,17 @@ func setupListenersForApp(uiState *UIState) error {
 			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
 			return nil                                               // Prevent further processing
 		}
+
+		// back to closest-parent
+		if event.Key() == tcell.KeyRune && event.Rune() == 'b' {
+			currentNode := uiState.apiResourcesTreeView.GetCurrentNode()
+			closestParentThatHasChildren := getClosestParentThatHasChildren(uiState, currentNode)
+			if closestParentThatHasChildren != nil {
+				uiState.apiResourcesTreeView.SetCurrentNode(closestParentThatHasChildren)
+			}
+			return nil
+		}
+
 		return event
 	})
 	return nil
