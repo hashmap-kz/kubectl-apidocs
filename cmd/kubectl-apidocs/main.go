@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/hashmap-kz/kubectl-apidocs/pkg/apidocs"
@@ -19,7 +20,7 @@ func main() {
 	if os.Getenv("KUBECTL_APIDOCS_DEBUG_LOG") == "enable" {
 		ts := time.Now().Format("20060102150405")
 		lg := fmt.Sprintf("%s-kubectl-apidocs.log", ts)
-		file, err := os.OpenFile(lg, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
+		file, err := os.OpenFile(filepath.Join(os.TempDir(), lg), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
 		if err != nil {
 			slog.Error("failed to open log file", "error", err)
 			return
