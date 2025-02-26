@@ -92,6 +92,7 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 					curNode.SetExpanded(false)
 				}
 			}
+			return nil
 		}
 		if (event.Key() == tcell.KeyRune && event.Rune() == 'l') || event.Key() == tcell.KeyRight {
 			curNode := uiState.apiResourcesTreeView.GetCurrentNode()
@@ -101,6 +102,7 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 					curNode.SetExpanded(true)
 				}
 			}
+			return nil
 		}
 
 		// back to the root (step back) by ESC
