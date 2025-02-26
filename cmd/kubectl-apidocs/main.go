@@ -37,4 +37,6 @@ func main() {
 		_ = logFile.Close()
 		os.Exit(1)
 	}
+
+	_ = logFile.Close()
 }
