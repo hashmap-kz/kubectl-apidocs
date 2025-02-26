@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -42,6 +43,7 @@ type UIState struct {
 	cmdInputIsOn            bool
 	cmdInputPurpose         cmdInputPurpose
 	treeLinks               *TreeLinks
+	explainCache            *sync.Map
 }
 
 func RunApp(uiData *UIData) error {
@@ -126,6 +128,7 @@ func RunApp(uiData *UIData) error {
 		mainLayout:              mainLayout,
 		cmdInput:                cmdInput,
 		treeLinks:               treeLinks,
+		explainCache:            &sync.Map{},
 	})
 	if err != nil {
 		return err
