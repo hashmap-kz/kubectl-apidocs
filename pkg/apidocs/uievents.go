@@ -148,28 +148,31 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 			listenersErr = err
 			return
 		}
-
 		uiState.apiResourcesDetailsView.SetText(data.path)
 		if data.IsNodeType(nodeTypeField, nodeTypeResource) {
-			if cached, ok := uiState.explainCache.Load(data.path); ok {
-				slog.Debug("explain", slog.String("cached", data.path))
-				uiState.apiResourcesDetailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, cached))
-			} else {
-				slog.Debug("explain", slog.String("perform", data.path))
-				explainer := NewExplainer(*data.gvr, uiData.OpenAPIClient)
-				buf := bytes.Buffer{}
-				err := explainer.Explain(&buf, data.path)
-				if err == nil {
-					uiState.apiResourcesDetailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
-					uiState.explainCache.Store(data.path, buf.String())
-				}
-			}
+			explainPath(uiState, data, uiData)
 		}
 	})
 	if listenersErr != nil {
 		return listenersErr
 	}
 	return nil
+}
+
+func explainPath(uiState *UIState, data *TreeData, uiData *UIData) {
+	if cached, ok := uiState.explainCache.Load(data.path); ok {
+		slog.Debug("explain", slog.String("cached", data.path))
+		uiState.apiResourcesDetailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, cached))
+	} else {
+		slog.Debug("explain", slog.String("perform", data.path))
+		explainer := NewExplainer(*data.gvr, uiData.OpenAPIClient)
+		buf := bytes.Buffer{}
+		err := explainer.Explain(&buf, data.path)
+		if err == nil {
+			uiState.apiResourcesDetailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
+			uiState.explainCache.Store(data.path, buf.String())
+		}
+	}
 }
 
 func setupListenersForResourceDetailsView(uiState *UIState) error {
