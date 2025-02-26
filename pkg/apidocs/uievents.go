@@ -3,6 +3,7 @@ package apidocs
 import (
 	"bytes"
 	"fmt"
+	"log/slog"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -150,11 +151,18 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 
 		uiState.apiResourcesDetailsView.SetText(data.path)
 		if data.IsNodeType(nodeTypeField, nodeTypeResource) {
-			explainer := NewExplainer(*data.gvr, uiData.OpenAPIClient)
-			buf := bytes.Buffer{}
-			err := explainer.Explain(&buf, data.path)
-			if err == nil {
-				uiState.apiResourcesDetailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
+			if cached, ok := uiState.explainCache.Load(data.path); ok {
+				slog.Debug("explain", slog.String("cached", data.path))
+				uiState.apiResourcesDetailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, cached))
+			} else {
+				slog.Debug("explain", slog.String("perform", data.path))
+				explainer := NewExplainer(*data.gvr, uiData.OpenAPIClient)
+				buf := bytes.Buffer{}
+				err := explainer.Explain(&buf, data.path)
+				if err == nil {
+					uiState.apiResourcesDetailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
+					uiState.explainCache.Store(data.path, buf.String())
+				}
 			}
 		}
 	})
