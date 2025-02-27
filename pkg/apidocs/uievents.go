@@ -191,6 +191,7 @@ func setupListenersForResourceDetailsView(uiState *UIState) error {
 func setupListenersForCmdInput(uiState *UIState) error {
 	// Command was set, process it, close input cmd, set focus onto the tree
 	uiState.cmdInput.SetDoneFunc(func(key tcell.Key) {
+		// handle ENTER: search or CMD
 		if key == tcell.KeyEnter {
 			// search
 			if uiState.cmdInputIsOn && uiState.cmdInputPurpose == cmdInputPurposeSearch {
@@ -213,6 +214,15 @@ func setupListenersForCmdInput(uiState *UIState) error {
 			uiState.mainLayout.RemoveItem(uiState.cmdInput)    // Hide the input field
 			uiState.app.SetFocus(uiState.apiResourcesTreeView) // Focus back to main layout
 		}
+
+		// handle ESC: hide cmd-input on ESC
+		if key == tcell.KeyEsc {
+			if uiState.cmdInputIsOn {
+				uiState.cmdInputIsOn = false
+				uiState.mainLayout.RemoveItem(uiState.cmdInput)    // Hide the input field
+				uiState.app.SetFocus(uiState.apiResourcesTreeView) // Focus back to main layout
+			}
+		}
 	})
 
 	return nil
@@ -233,7 +243,7 @@ func getClosestParentThatHasChildren(uiState *UIState, node *tview.TreeNode) *tv
 func setupListenersForApp(uiState *UIState) error {
 	// Set up application key events
 	uiState.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		// Show the input field on Shift+:
+		// search input
 		if event.Key() == tcell.KeyRune && event.Rune() == '/' {
 			if uiState.cmdInputIsOn {
 				return nil
@@ -245,6 +255,8 @@ func setupListenersForApp(uiState *UIState) error {
 			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
 			return nil                                               // Prevent further processing
 		}
+
+		// command input
 		if event.Key() == tcell.KeyRune && event.Rune() == ':' {
 			if uiState.cmdInputIsOn {
 				return nil
@@ -256,6 +268,17 @@ func setupListenersForApp(uiState *UIState) error {
 			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
 			return nil                                               // Prevent further processing
 		}
+
+		// back to closest-parent
+		if event.Key() == tcell.KeyRune && event.Rune() == 'b' {
+			currentNode := uiState.apiResourcesTreeView.GetCurrentNode()
+			closestParentThatHasChildren := getClosestParentThatHasChildren(uiState, currentNode)
+			if closestParentThatHasChildren != nil {
+				uiState.apiResourcesTreeView.SetCurrentNode(closestParentThatHasChildren)
+			}
+			return nil
+		}
+
 		return event
 	})
 	return nil

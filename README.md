@@ -73,6 +73,7 @@ Here's a **`kubectl apidocs`** demo:
 | **`/`**        | Open search mode                                                     |
 | **`<:cmd>`**   | Execute a command                                                    |
 | **`<ctrl-c>`** | Quit application                                                     |
+| **`<b>`**      | Step back to closest root                                            |
 
 ---
 
