@@ -2,6 +2,7 @@ package apidocs
 
 import (
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"sync"
@@ -175,7 +176,15 @@ func populateRootNodeWithResources(
 			if err != nil {
 				return err
 			}
+			// no resources
+			if resourceNode == nil {
+				continue
+			}
 			groupNode.AddChild(resourceNode)
+		}
+
+		if len(groupNode.GetChildren()) == 0 {
+			continue
 		}
 
 		// Add the group node as a child of the root node
@@ -199,6 +208,10 @@ func createResourceNodeWithAllFieldsSet(
 	paths, err := getPaths(uiData.RestMapper, uiData.OpenAPISchema, gvr)
 	if err != nil {
 		return nil, err
+	}
+	if len(paths) == 0 {
+		slog.Debug("resources", slog.String("ignored-group", group.String()))
+		return nil, nil
 	}
 
 	// Create internal tree from a given paths
