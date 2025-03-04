@@ -1,6 +1,6 @@
-# **kubectl-apidocs**
+# kubectl-apidocs
 
-_A `kubectl` plugin for learning about API resource documentation in a tree view format._
+_A `kubectl` plugin for browsing Kubernetes API resource documentation in an interactive tree view._
 
 [![License](https://img.shields.io/github/license/hashmap-kz/kubectl-apidocs)](https://github.com/hashmap-kz/kubectl-apidocs/blob/master/LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hashmap-kz/kubectl-apidocs)](https://goreportcard.com/report/github.com/hashmap-kz/kubectl-apidocs)
