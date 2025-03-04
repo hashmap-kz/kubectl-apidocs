@@ -61,7 +61,7 @@ _A `kubectl` plugin for browsing Kubernetes API resource documentation in an int
    the [Releases page](https://github.com/hashmap-kz/kubectl-apidocs/releases).
 2. Place the binary in your system's `PATH` (e.g., `/usr/local/bin`).
 
-#### Example installation script for Unix-Based OS:
+#### Example installation script for Unix-Based OS _(requirements: tar, curl, jq)_:
 
 ```bash
 (
