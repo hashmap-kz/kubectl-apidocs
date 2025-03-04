@@ -11,10 +11,37 @@ _A `kubectl` plugin for learning about API resource documentation in a tree view
 
 ---
 
+## Table of Contents
+
+- [Examples](#examples)
+- [Installation](#installation)
+    - [Using Krew](#using-krew)
+    - [Manual Installation](#manual-installation)
+- [Usage](#usage)
+- [Terminal Navigation Guide](#terminal-navigation-guide)
+- [Contributing](#contributing)
+- [License](#license)
+- [Additional resources](#additional-resources)
+
+---
+
 ## Examples
 
-Here's a **`kubectl apidocs`** demo:
+### `kubectl apidocs` interactive demo
+
 ![apidocs demo GIF](assets/apidocs-demo.gif)
+
+### Groups and resources are selectable
+
+#### _Navigate using arrow keys or `hjkl`, and use **ENTER** to select or **ESC** to go back_
+
+![Preview-1](assets/preview-1.png)
+
+### Fields are selectable
+
+#### _Use **TAB** to toggle focus between the tree view and the details panel; the details panel is scrollable_
+
+![Preview-2](assets/preview-2.png)
 
 ---
 
@@ -63,7 +90,7 @@ kubectl apidocs
 ### 🖥️ **Keyboard Shortcuts**
 
 | **Shortcut**   | **Action**                                                           |
-| -------------- | -------------------------------------------------------------------- |
+|----------------|----------------------------------------------------------------------|
 | **`<hjkl>`**   | Navigate (Vim-style)                                                 |
 | **`<ARROWS>`** | Navigate (Arrow keys)                                                |
 | **`<ENTER>`**  | Select (group/resource)                                              |
