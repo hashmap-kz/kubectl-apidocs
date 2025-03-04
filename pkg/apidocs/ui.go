@@ -58,7 +58,7 @@ func RunApp(uiData *UIData) error {
 	app := tview.NewApplication()
 
 	// Create the root tree node
-	apiResourcesRootNode := tview.NewTreeNode("API Resources").
+	apiResourcesRootNode := tview.NewTreeNode("API Resources >").
 		SetReference(&TreeData{nodeType: nodeTypeRoot})
 
 	// Sort the API groups with custom logic to prioritize apps/v1 and v1 at the top
