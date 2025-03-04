@@ -55,15 +55,25 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 			return
 		}
 
-		if data.IsNodeType(nodeTypeGroup, nodeTypeResource) && !data.inPreview {
-			err := setInPreview(node, true)
-			if err != nil {
-				listenersErr = err
-				return
+		if data.IsNodeType(nodeTypeGroup, nodeTypeResource) {
+			// not in preview, add to view-stack
+			if !data.inPreview {
+				err := setInPreview(node, true)
+				if err != nil {
+					listenersErr = err
+					return
+				}
+				navigationStack = append(navigationStack, node)
+				uiState.apiResourcesTreeView.SetRoot(node).SetCurrentNode(node)
+				node.SetExpanded(true)
+			} else {
+				node.SetExpanded(!node.IsExpanded())
 			}
-			navigationStack = append(navigationStack, node)
-			uiState.apiResourcesTreeView.SetRoot(node).SetCurrentNode(node)
-			node.SetExpanded(true)
+		} else if data.IsNodeType(nodeTypeRoot) {
+			// expand/collapse all groups
+			for _, nc := range node.GetChildren() {
+				nc.SetExpanded(!nc.IsExpanded())
+			}
 		} else {
 			// just expand subtree
 			node.SetExpanded(!node.IsExpanded())
@@ -85,23 +95,11 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 		// left-arrow/right-arrow -> collapse/expand
 		// NOTE: expand fields only, ignore groups and resources (they're managed by ENTER)
 		if (event.Key() == tcell.KeyRune && event.Rune() == 'h') || event.Key() == tcell.KeyLeft {
-			curNode := uiState.apiResourcesTreeView.GetCurrentNode()
-			data, err := extractTreeData(curNode)
-			if err == nil {
-				if data.IsNodeType(nodeTypeField) {
-					curNode.SetExpanded(false)
-				}
-			}
+			listenersErr = expandCollapseHJKL(uiState, false)
 			return nil
 		}
 		if (event.Key() == tcell.KeyRune && event.Rune() == 'l') || event.Key() == tcell.KeyRight {
-			curNode := uiState.apiResourcesTreeView.GetCurrentNode()
-			data, err := extractTreeData(curNode)
-			if err == nil {
-				if data.IsNodeType(nodeTypeField) {
-					curNode.SetExpanded(true)
-				}
-			}
+			listenersErr = expandCollapseHJKL(uiState, true)
 			return nil
 		}
 
@@ -175,6 +173,28 @@ func explainPath(uiState *UIState, data *TreeData, uiData *UIData) {
 			uiState.explainCache.Store(data.path, buf.String())
 		}
 	}
+}
+
+func expandCollapseHJKL(uiState *UIState, expanded bool) error {
+	curNode := uiState.apiResourcesTreeView.GetCurrentNode()
+	data, err := extractTreeData(curNode)
+	if err != nil {
+		return err
+	}
+
+	// expand/collapse node itself
+	if data.IsNodeType(nodeTypeField, nodeTypeGroup) {
+		curNode.SetExpanded(expanded)
+	}
+
+	// expand/collapse all groups
+	if data.IsNodeType(nodeTypeRoot) {
+		for _, nc := range curNode.GetChildren() {
+			nc.SetExpanded(expanded)
+		}
+	}
+
+	return nil
 }
 
 func setupListenersForResourceDetailsView(uiState *UIState) error {
