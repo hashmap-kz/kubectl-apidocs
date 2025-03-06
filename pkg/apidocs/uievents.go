@@ -307,6 +307,10 @@ func setupListenersForApp(uiState *UIState) error {
 func setFocusOn(uiState *UIState, curFocus tview.Primitive) {
 	uiState.app.SetFocus(curFocus)
 
+	// TODO: simplify this (loops, arrays, bitmasks ?)
+	// the idea is simple: there are a bunch of views that may be focused,
+	// change the border-color for the view that is under focus right now, and reset border-color
+	// for all other views.
 	switch curFocus {
 	case uiState.apiResourcesTreeView:
 		uiState.apiResourcesTreeView.SetBorderColor(focusColor)
