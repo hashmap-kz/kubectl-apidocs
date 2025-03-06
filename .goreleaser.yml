@@ -42,3 +42,20 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
+brews:
+  - name: kubectl-apidocs
+    repository:
+      owner: hashmap-kz
+      name: homebrew-tap
+      branch: main
+    commit_author:
+      name: alexey.zh
+      email: mailbox.stdio@gmail.com
+    homepage: https://github.com/hashmap-kz/homebrew-tap
+    description: "Quickly navigate and inspect Kubernetes API resources with an interactive tree view"
+    license: "Apache-2.0"
+    install: |
+      bin.install "kubectl-apidocs"
+    test: |
+      system "#{bin}/kubectl-apidocs"
