@@ -51,9 +51,17 @@ _A `kubectl` plugin for browsing Kubernetes API resource documentation in an int
 
 1. Install the [Krew](https://krew.sigs.k8s.io/docs/user-guide/setup/) plugin manager if you haven’t already.
 2. Run the following command:
-   ```bash
-   kubectl krew install apidocs
-   ```
+
+```bash
+kubectl krew install apidocs
+```
+
+### Homebrew installation
+
+```bash
+brew tap hashmap-kz/homebrew-tap
+brew install kubectl-apidocs
+```
 
 ### Manual Installation
 
