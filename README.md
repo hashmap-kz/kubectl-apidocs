@@ -16,6 +16,7 @@ _A `kubectl` plugin for browsing Kubernetes API resource documentation in an int
 - [Examples](#examples)
 - [Installation](#installation)
     - [Using Krew](#using-krew)
+    - [Homebrew installation](#homebrew-installation)
     - [Manual Installation](#manual-installation)
 - [Usage](#usage)
 - [Terminal Navigation Guide](#terminal-navigation-guide)
