@@ -5,6 +5,11 @@ import (
 	"github.com/rivo/tview"
 )
 
+var (
+	focusColor   = tcell.ColorSteelBlue
+	noFocusColor = tcell.ColorLightGray
+)
+
 // Helper function to reset all node colors
 func resetNodeColors(node *tview.TreeNode) {
 	if node == nil {

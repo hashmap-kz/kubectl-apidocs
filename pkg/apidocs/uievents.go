@@ -87,7 +87,7 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 	uiState.apiResourcesTreeView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		// Handle TAB key to switch focus between views
 		if event.Key() == tcell.KeyTab {
-			uiState.app.SetFocus(uiState.apiResourcesDetailsView) // Switch focus to the DetailsView
+			setFocusOn(uiState, uiState.apiResourcesDetailsView) // Switch focus to the DetailsView
 			return nil
 		}
 
@@ -200,7 +200,7 @@ func expandCollapseHJKL(uiState *UIState, expanded bool) error {
 func setupListenersForResourceDetailsView(uiState *UIState) error {
 	uiState.apiResourcesDetailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyTab {
-			uiState.app.SetFocus(uiState.apiResourcesTreeView) // Switch focus to the TreeView
+			setFocusOn(uiState, uiState.apiResourcesTreeView) // Switch focus to the TreeView
 			return nil
 		}
 		return event
@@ -231,16 +231,16 @@ func setupListenersForCmdInput(uiState *UIState) error {
 
 			uiState.cmdInput.SetText("")
 			uiState.cmdInputIsOn = false
-			uiState.mainLayout.RemoveItem(uiState.cmdInput)    // Hide the input field
-			uiState.app.SetFocus(uiState.apiResourcesTreeView) // Focus back to main layout
+			uiState.mainLayout.RemoveItem(uiState.cmdInput)   // Hide the input field
+			setFocusOn(uiState, uiState.apiResourcesTreeView) // Focus back to main layout
 		}
 
 		// handle ESC: hide cmd-input on ESC
 		if key == tcell.KeyEsc {
 			if uiState.cmdInputIsOn {
 				uiState.cmdInputIsOn = false
-				uiState.mainLayout.RemoveItem(uiState.cmdInput)    // Hide the input field
-				uiState.app.SetFocus(uiState.apiResourcesTreeView) // Focus back to main layout
+				uiState.mainLayout.RemoveItem(uiState.cmdInput)   // Hide the input field
+				setFocusOn(uiState, uiState.apiResourcesTreeView) // Focus back to main layout
 			}
 		}
 	})
@@ -272,7 +272,7 @@ func setupListenersForApp(uiState *UIState) error {
 			uiState.cmdInputIsOn = true
 			uiState.cmdInputPurpose = cmdInputPurposeSearch
 			uiState.mainLayout.AddItem(uiState.cmdInput, 3, 1, true) // Show the input field
-			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
+			setFocusOn(uiState, uiState.cmdInput)                    // Focus on the input field
 			return nil                                               // Prevent further processing
 		}
 
@@ -285,7 +285,7 @@ func setupListenersForApp(uiState *UIState) error {
 			uiState.cmdInputIsOn = true
 			uiState.cmdInputPurpose = cmdInputPurposeCmd
 			uiState.mainLayout.AddItem(uiState.cmdInput, 3, 1, true) // Show the input field
-			uiState.app.SetFocus(uiState.cmdInput)                   // Focus on the input field
+			setFocusOn(uiState, uiState.cmdInput)                    // Focus on the input field
 			return nil                                               // Prevent further processing
 		}
 
@@ -302,4 +302,23 @@ func setupListenersForApp(uiState *UIState) error {
 		return event
 	})
 	return nil
+}
+
+func setFocusOn(uiState *UIState, curFocus tview.Primitive) {
+	uiState.app.SetFocus(curFocus)
+
+	switch curFocus {
+	case uiState.apiResourcesTreeView:
+		uiState.apiResourcesTreeView.SetBorderColor(focusColor)
+		uiState.apiResourcesDetailsView.SetBorderColor(noFocusColor)
+		uiState.cmdInput.SetBorderColor(noFocusColor)
+	case uiState.apiResourcesDetailsView:
+		uiState.apiResourcesTreeView.SetBorderColor(noFocusColor)
+		uiState.apiResourcesDetailsView.SetBorderColor(focusColor)
+		uiState.cmdInput.SetBorderColor(noFocusColor)
+	case uiState.cmdInput:
+		uiState.apiResourcesTreeView.SetBorderColor(noFocusColor)
+		uiState.apiResourcesDetailsView.SetBorderColor(noFocusColor)
+		uiState.cmdInput.SetBorderColor(focusColor)
+	}
 }
