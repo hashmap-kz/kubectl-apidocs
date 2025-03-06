@@ -84,6 +84,7 @@ func RunApp(uiData *UIData) error {
 	apiResourcesTreeView.SetGraphicsColor(tcell.ColorWhite)
 	apiResourcesTreeView.SetTitle("Resources")
 	apiResourcesTreeView.SetBorder(true)
+	apiResourcesTreeView.SetBorderColor(focusColor)
 
 	// Create a main details view (rhs)
 	apiResourcesDetailsView := tview.NewTextView()
