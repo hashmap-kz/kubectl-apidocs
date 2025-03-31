@@ -1,18 +1,8 @@
----
+version: "2"
 run:
   concurrency: 6
-  timeout: 10m
-issues:
-  exclude-dirs:
-    - integration/*
-
-  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
-  max-issues-per-linter: 0
-
-  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
-  max-same-issues: 0
 linters:
-  disable-all: true
+  default: none
   enable:
     - asciicheck
     - bodyclose
@@ -24,15 +14,11 @@ linters:
     - gocritic
     - gocyclo
     - godox
-    - gofmt
-    - gofumpt
     - goheader
-    - goimports
     - gomoddirectives
     - gomodguard
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - importas
     - ineffassign
@@ -47,75 +33,81 @@ linters:
     - rowserrcheck
     - sqlclosecheck
     - staticcheck
-    - stylecheck
-    - typecheck
     - unconvert
     - unparam
     - unused
     - whitespace
-
-linters-settings:
-  godox:
-    keywords:
-      - BUG
-      - FIXME
-      - HACK
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  gocritic:
-    disabled-checks:
-      - ifElseChain
-    enabled-checks:
-      # Diagnostic
-      - commentedOutCode
-      - nilValReturn
-      - sloppyReassign
-      - weakCond
-      - octalLiteral
-
-      # Performance
-      - appendCombine
-      - equalFold
-      - hugeParam
-      - indexAlloc
-      - rangeExprCopy
-      - rangeValCopy
-
-      # Style
-      - boolExprSimplify
-      - commentedOutImport
-      - docStub
-      - emptyFallthrough
-      - emptyStringTest
-      - hexLiteral
-      - methodExprCall
-      - stringXbytes
-      - typeAssertChain
-      - unlabelStmt
-      - yodaStyleExpr
-      # - ifElseChain
-
-      # Opinionated
-      - builtinShadow
-      - importShadow
-      - initClause
-      - nestingReduce
-      - paramTypeCombine
-      - ptrToRefParam
-      - typeUnparen
-      - unnamedResult
-      - unnecessaryBlock
-  nolintlint:
-    # Enable to ensure that nolint directives are all used. Default is true.
-    allow-unused: false
-    # Disable to ensure that nolint directives don't have a leading space. Default is true.
-    # TODO(lint): Enforce machine-readable `nolint` directives
-    # allow-leading-space: true
-    # Exclude following linters from requiring an explanation.  Default is [].
-    allow-no-explanation: []
-    # Enable to require an explanation of nonzero length after each nolint directive. Default is false.
-    # TODO(lint): Enforce explanations for `nolint` directives
-    require-explanation: false
-    # Enable to require nolint directives to mention the specific linter being suppressed. Default is false.
-    require-specific: true
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+    gocritic:
+      enabled-checks:
+        - commentedOutCode
+        - nilValReturn
+        - sloppyReassign
+        - weakCond
+        - octalLiteral
+        - appendCombine
+        - equalFold
+        - hugeParam
+        - indexAlloc
+        - rangeExprCopy
+        - rangeValCopy
+        - boolExprSimplify
+        - commentedOutImport
+        - docStub
+        - emptyFallthrough
+        - emptyStringTest
+        - hexLiteral
+        - methodExprCall
+        - stringXbytes
+        - typeAssertChain
+        - unlabelStmt
+        - yodaStyleExpr
+        - builtinShadow
+        - importShadow
+        - initClause
+        - nestingReduce
+        - paramTypeCombine
+        - ptrToRefParam
+        - typeUnparen
+        - unnamedResult
+        - unnecessaryBlock
+      disabled-checks:
+        - ifElseChain
+    godox:
+      keywords:
+        - BUG
+        - FIXME
+        - HACK
+    nolintlint:
+      require-explanation: false
+      require-specific: true
+      allow-unused: false
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - integration/*
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - integration/*
+      - third_party$
+      - builtin$
+      - examples$
