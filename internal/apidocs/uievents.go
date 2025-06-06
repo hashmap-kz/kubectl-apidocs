@@ -104,7 +104,16 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 		}
 
 		// back to the root (step back) by ESC
-		if event.Key() == tcell.KeyEscape && len(navigationStack) > 1 {
+		if event.Key() == tcell.KeyEscape && (len(navigationStack) > 1 || uiState.isInFilter) {
+			// restore original layout, drop filtered tree
+			if uiState.isInFilter {
+				uiState.isInFilter = false
+				// restore full tree
+				uiState.apiResourcesTreeView.SetRoot(uiState.apiResourcesRootNode).
+					SetCurrentNode(uiState.apiResourcesRootNode)
+				return nil
+			}
+
 			// a node, that was used for preview, we need to clear the flag
 			cur := navigationStack[len(navigationStack)-1]
 			err := setInPreview(cur, false)

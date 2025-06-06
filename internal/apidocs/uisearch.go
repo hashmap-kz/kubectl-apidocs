@@ -46,7 +46,7 @@ func buildFilteredTree(node *tview.TreeNode, searchTerm string) *tview.TreeNode 
 		return newNode
 	}
 
-	// If neither this node nor any child matched → omit
+	// If neither this node nor any child matched -> omit
 	return nil
 }
 
@@ -60,10 +60,11 @@ func showFilteredTree(uiState *UIState, treeView *tview.TreeView, searchTerm str
 
 	filteredRoot := buildFilteredTree(uiState.apiResourcesRootNode, strings.ToLower(searchTerm))
 	if filteredRoot == nil {
-		// Nothing matched → empty root
+		// Nothing matched -> empty root
 		filteredRoot = tview.NewTreeNode("(no matches)")
 	}
 
 	resetNodeColors(filteredRoot)
+	uiState.isInFilter = true
 	treeView.SetRoot(filteredRoot).SetCurrentNode(filteredRoot)
 }
