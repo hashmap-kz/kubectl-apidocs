@@ -45,6 +45,7 @@ type UIState struct {
 	cmdInputPurpose         cmdInputPurpose
 	treeLinks               *TreeLinks
 	explainCache            *sync.Map
+	isInFilter              bool // whether current resources view filtered by search CMD
 }
 
 func RunApp(uiData *UIData) error {

@@ -6,7 +6,6 @@ before:
 
 builds:
   - id: kubectl-apidocs
-    main: ./cmd/kubectl-apidocs
     binary: kubectl-apidocs
     ldflags:
       - -s -w
@@ -28,7 +27,7 @@ checksum:
   name_template: checksums.txt
 
 archives:
-  - builds:
+  - ids:
       - kubectl-apidocs
     name_template: "{{ .ProjectName }}_{{ .Tag }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
     wrap_in_directory: "false"

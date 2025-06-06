@@ -6,7 +6,7 @@
           "type": "go",
           "request": "launch",
           "mode": "debug",
-          "program": "${workspaceFolder}/cmd/kubectl-apidocs/main.go",
+          "program": "${workspaceFolder}/main.go",
           "args": [],
           "env": {},
           "console": "integratedTerminal"
