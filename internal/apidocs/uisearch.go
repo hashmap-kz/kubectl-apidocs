@@ -64,5 +64,6 @@ func showFilteredTree(uiState *UIState, treeView *tview.TreeView, searchTerm str
 		filteredRoot = tview.NewTreeNode("(no matches)")
 	}
 
+	resetNodeColors(filteredRoot)
 	treeView.SetRoot(filteredRoot).SetCurrentNode(filteredRoot)
 }
