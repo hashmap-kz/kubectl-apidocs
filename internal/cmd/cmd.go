@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/hashmap-kz/kubectl-apidocs/pkg/apidocs"
+	"github.com/hashmap-kz/kubectl-apidocs/internal/apidocs"
 
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 

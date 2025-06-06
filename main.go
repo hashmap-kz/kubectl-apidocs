@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hashmap-kz/kubectl-apidocs/pkg/apidocs"
+	"github.com/hashmap-kz/kubectl-apidocs/internal/apidocs"
 
-	"github.com/hashmap-kz/kubectl-apidocs/pkg/cmd"
+	"github.com/hashmap-kz/kubectl-apidocs/internal/cmd"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )

@@ -216,9 +216,7 @@ func setupListenersForCmdInput(uiState *UIState) error {
 			// search
 			if uiState.cmdInputIsOn && uiState.cmdInputPurpose == cmdInputPurposeSearch {
 				searchTerm := uiState.cmdInput.GetText()
-				currentNode := uiState.apiResourcesTreeView.GetCurrentNode()
-				closestParentThatHasChildren := getClosestParentThatHasChildren(uiState, currentNode)
-				highlightMatchingNodes(uiState, closestParentThatHasChildren, searchTerm)
+				showFilteredTree(uiState, uiState.apiResourcesTreeView, searchTerm)
 			}
 
 			// quit

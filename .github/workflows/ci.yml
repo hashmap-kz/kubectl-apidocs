@@ -4,28 +4,62 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - "master"
       - "release/**"
+    paths-ignore:
+      - ".github/**"
+      - "docs/**"
+      - "examples/**"
+      - "hack/**"
+      - "**/*.md"
+      - "**/*.gitignore"
+      - "**/*.gitattributes"
   pull_request:
     branches:
-      - master
+      - "master"
       - "release/**"
+    paths-ignore:
+      - ".github/**"
+      - "docs/**"
+      - "examples/**"
+      - "hack/**"
+      - "**/*.md"
+      - "**/*.gitignore"
+      - "**/*.gitattributes"
+  workflow_dispatch:
 
 jobs:
   ci_job:
     name: test
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Run unit tests
-        run: make test
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
 
-      # - name: Run GoReleaser
+      - name: Ensure gofmt
+        run: test -z "$(gofmt -s -d .)"
+        shell: bash
+
+      - name: Ensure go.mod is already tidied
+        run: go mod tidy && git diff --no-patch --exit-code
+        shell: bash
+
+      - name: Run unit tests
+        run: go test -v -race ./...
+        shell: bash
+
+      # Uncomment these when you're ready to use GoReleaser
+      #
+      # - name: Install GoReleaser
       #   uses: goreleaser/goreleaser-action@v6
       #   with:
       #     install-only: true
       #
-      # - name: Check goreleaser
+      # - name: Run GoReleaser (snapshot)
       #   run: make snapshot

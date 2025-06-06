@@ -13,7 +13,7 @@ all: build
 # Build the binary (GOARCH=amd64 GOOS=linux; -o $(BINARY))
 .PHONY: build
 build: $(SOURCES)
-	CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/ ./cmd/kubectl-apidocs
+	CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/ main.go
 
 # Install the binary to /usr/local/bin
 .PHONY: install
