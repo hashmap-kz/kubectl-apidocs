@@ -6,7 +6,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/rivo/tview v0.0.0-20250501113434-0c592cd31026
 	github.com/spf13/cobra v1.9.1
-	k8s.io/apimachinery v0.33.3
+	k8s.io/apimachinery v0.33.4
 	k8s.io/cli-runtime v0.33.2
 	k8s.io/client-go v0.33.3
 	k8s.io/kube-openapi v0.0.0-20250610211856-8b98d1ed966a
