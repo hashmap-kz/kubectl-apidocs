@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/gdamore/tcell/v2 v2.9.0
-	github.com/rivo/tview v0.0.0-20250501113434-0c592cd31026
+	github.com/rivo/tview v0.42.0
 	github.com/spf13/cobra v1.9.1
 	k8s.io/apimachinery v0.33.4
 	k8s.io/cli-runtime v0.33.4
