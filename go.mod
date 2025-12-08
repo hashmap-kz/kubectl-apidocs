@@ -3,7 +3,7 @@ module github.com/hashmap-kz/kubectl-apidocs
 go 1.24.0
 
 require (
-	github.com/gdamore/tcell/v2 v2.11.0
+	github.com/gdamore/tcell/v2 v2.13.2
 	github.com/rivo/tview v0.42.0
 	github.com/spf13/cobra v1.10.2
 	k8s.io/apimachinery v0.34.2
