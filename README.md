@@ -92,6 +92,12 @@ chmod +x /usr/local/bin/kubectl-apidocs
 kubectl apidocs
 ```
 
+Tree search and details search are context-aware:
+
+- Press `/` while the tree has focus to search within the currently visible tree root.
+- Press `TAB` to move to the details pane, then `/` to search within the current details text.
+- Press `r` on a resource to show recursive explain output in the details pane.
+
 ---
 
 ## Terminal Navigation Guide
@@ -104,8 +110,10 @@ kubectl apidocs
 | **`<ARROWS>`** | Navigate (Arrow keys)                                                |
 | **`<ENTER>`**  | Select (group/resource)                                              |
 | **`<TAB>`**    | Switch focus between tree/details (NOTE: details-view is scrollable) |
-| **`<ESC>`**    | Step back in navigation                                              |
-| **`/`**        | Open search mode                                                     |
+| **`<ESC>`**    | Step back in tree navigation or clear details search                 |
+| **`/`**        | Search current tree scope or current details text                    |
+| **`<r>`**      | Show recursive explain output for the selected resource              |
+| **`<n/N>`**    | Jump to next/previous match in details search                        |
 | **`<:cmd>`**   | Execute a command                                                    |
 | **`<ctrl-c>`** | Quit application                                                     |
 | **`<b>`**      | Step back to closest root                                            |
@@ -116,6 +124,9 @@ kubectl apidocs
 
 - **Use `hjkl` for fast movement** (Vim-style navigation).
 - **`TAB` lets you quickly switch between tree-view and details (NOTE: details-view is scrollable)**.
+- **Tree search is scoped to the current tree root**, so searching inside a selected resource stays within that resource.
+- **Use `r` before switching to the details pane** if you want to search inside full recursive explain output.
+- **In the details pane, use `/` then `n` / `N`** to search and move through matches.
 
 ---
 
