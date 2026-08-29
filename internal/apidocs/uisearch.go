@@ -21,6 +21,9 @@ func buildFilteredTree(node *tview.TreeNode, searchTerm string) *tview.TreeNode 
 	if strings.Contains(strings.ToLower(node.GetText()), searchTerm) && shouldHighlight {
 		matched = true
 	}
+	if matched && data.IsNodeType(nodeTypeResource) {
+		return cloneTreeForResourceMatch(node)
+	}
 
 	// Recursively process children
 	var matchingChildren []*tview.TreeNode
@@ -50,6 +53,38 @@ func buildFilteredTree(node *tview.TreeNode, searchTerm string) *tview.TreeNode 
 	return nil
 }
 
+func cloneTree(node *tview.TreeNode, expanded bool) *tview.TreeNode {
+	if node == nil {
+		return nil
+	}
+
+	newNode := tview.NewTreeNode(node.GetText()).
+		SetReference(node.GetReference()).
+		SetExpanded(expanded)
+
+	for _, child := range node.GetChildren() {
+		newNode.AddChild(cloneTree(child, expanded))
+	}
+
+	return newNode
+}
+
+func cloneTreeForResourceMatch(node *tview.TreeNode) *tview.TreeNode {
+	if node == nil {
+		return nil
+	}
+
+	newNode := tview.NewTreeNode(node.GetText()).
+		SetReference(node.GetReference()).
+		SetExpanded(false)
+
+	for _, child := range node.GetChildren() {
+		newNode.AddChild(cloneTree(child, false))
+	}
+
+	return newNode
+}
+
 func showFilteredTree(uiState *UIState, treeView *tview.TreeView, searchTerm string) {
 	if searchTerm == "" {
 		// Show full tree again
@@ -58,7 +93,8 @@ func showFilteredTree(uiState *UIState, treeView *tview.TreeView, searchTerm str
 		return
 	}
 
-	filteredRoot := buildFilteredTree(uiState.apiResourcesRootNode, strings.ToLower(searchTerm))
+	searchRoot := getSearchRoot(uiState, treeView)
+	filteredRoot := buildFilteredTree(searchRoot, strings.ToLower(searchTerm))
 	if filteredRoot == nil {
 		// Nothing matched -> empty root
 		filteredRoot = tview.NewTreeNode("(no matches)")
@@ -67,4 +103,15 @@ func showFilteredTree(uiState *UIState, treeView *tview.TreeView, searchTerm str
 	resetNodeColors(filteredRoot)
 	uiState.isInFilter = true
 	treeView.SetRoot(filteredRoot).SetCurrentNode(filteredRoot)
+}
+
+func getSearchRoot(uiState *UIState, treeView *tview.TreeView) *tview.TreeNode {
+	if treeView == nil {
+		return uiState.apiResourcesRootNode
+	}
+	root := treeView.GetRoot()
+	if root == nil {
+		return uiState.apiResourcesRootNode
+	}
+	return root
 }
