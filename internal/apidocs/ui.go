@@ -31,6 +31,7 @@ type cmdInputPurpose string
 var (
 	cmdInputPurposeCmd    cmdInputPurpose = "cmd"
 	cmdInputPurposeSearch cmdInputPurpose = "search"
+	cmdInputPurposeFind   cmdInputPurpose = "find"
 )
 
 type UIState struct {
@@ -46,6 +47,16 @@ type UIState struct {
 	treeLinks               *TreeLinks
 	explainCache            *sync.Map
 	isInFilter              bool // whether current resources view filtered by search CMD
+	detailsRawText          string
+	detailsSearchTerm       string
+	detailsSearchMatches    []detailsMatch
+	detailsSearchIndex      int
+}
+
+type detailsMatch struct {
+	start    int
+	end      int
+	regionID string
 }
 
 func RunApp(uiData *UIData) error {
@@ -90,6 +101,7 @@ func RunApp(uiData *UIData) error {
 	// Create a main details view (rhs)
 	apiResourcesDetailsView := tview.NewTextView()
 	apiResourcesDetailsView.SetDynamicColors(true)
+	apiResourcesDetailsView.SetRegions(true)
 	apiResourcesDetailsView.SetBorder(true)
 	apiResourcesDetailsView.SetTitle("Details")
 	apiResourcesDetailsView.SetScrollable(true)
@@ -276,7 +288,7 @@ func populateNodeWithResourceFields(
 
 func getHelpMenuContent() string {
 	return strings.TrimSpace(`
-[yellow]</term>[-]  Search | [yellow]<:cmd>[-] Command            | [yellow]<ENTER>[-] Select (gr/res) | [yellow]<hjkl>[-]   Navigate |
-[yellow]<ctrl-c>[-] Quit   | [yellow]<TAB>[-]  Focus tree/details | [yellow]<ESC>[-]   Step back       | [yellow]<ARROWS>[-] Navigate |
+[yellow]</term>[-]  Search             | [yellow]<:cmd>[-] Command            | [yellow]<ENTER>[-] Select (gr/res)   | [yellow]<hjkl>[-] Navigate  | [yellow]<r>[-]   Recursive |
+[yellow]<ctrl-c>[-] Quit               | [yellow]<TAB>[-]  Focus tree/details | [yellow]<ESC>[-]   Step back/clear   | [yellow]<n/N>[-]  Next/prev
 `)
 }

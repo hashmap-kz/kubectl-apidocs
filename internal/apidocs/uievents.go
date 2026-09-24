@@ -4,9 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+)
+
+const (
+	detailsSearchMatchStyle        = "[black:teal]"
+	detailsSearchCurrentMatchStyle = "[black:yellow]"
+	detailsSearchResetStyle        = "[-:-:-]"
 )
 
 func setupListeners(
@@ -91,6 +98,22 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 			return nil
 		}
 
+		if event.Key() == tcell.KeyRune && event.Rune() == 'r' {
+			currentNode := uiState.apiResourcesTreeView.GetCurrentNode()
+			if currentNode == nil {
+				return nil
+			}
+			data, err := extractTreeData(currentNode)
+			if err != nil {
+				listenersErr = err
+				return nil
+			}
+			if data.IsNodeType(nodeTypeResource) {
+				explainPathRecursive(uiState, data, uiData)
+				return nil
+			}
+		}
+
 		// h/l -> collapse/expand
 		// left-arrow/right-arrow -> collapse/expand
 		// NOTE: expand fields only, ignore groups and resources (they're managed by ENTER)
@@ -157,7 +180,7 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 			listenersErr = err
 			return
 		}
-		uiState.apiResourcesDetailsView.SetText(data.path)
+		setDetailsText(uiState, data.path)
 		if data.IsNodeType(nodeTypeField, nodeTypeResource) {
 			explainPath(uiState, data, uiData)
 		}
@@ -169,19 +192,45 @@ func setupListenersForResourcesTreeView(uiData *UIData, uiState *UIState) error 
 }
 
 func explainPath(uiState *UIState, data *TreeData, uiData *UIData) {
-	if cached, ok := uiState.explainCache.Load(data.path); ok {
-		slog.Debug("explain", slog.String("cached", data.path))
-		uiState.apiResourcesDetailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, cached))
+	cacheKey := explainCacheKey(data.path, false)
+	if cached, ok := uiState.explainCache.Load(cacheKey); ok {
+		slog.Debug("explain", slog.String("cached", cacheKey))
+		setDetailsText(uiState, fmt.Sprintf("%s\n\n%s", data.path, cached))
 	} else {
-		slog.Debug("explain", slog.String("perform", data.path))
+		slog.Debug("explain", slog.String("perform", cacheKey))
 		explainer := NewExplainer(*data.gvr, uiData.OpenAPIClient)
 		buf := bytes.Buffer{}
 		err := explainer.Explain(&buf, data.path)
 		if err == nil {
-			uiState.apiResourcesDetailsView.SetText(fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
-			uiState.explainCache.Store(data.path, buf.String())
+			setDetailsText(uiState, fmt.Sprintf("%s\n\n%s", data.path, buf.String()))
+			uiState.explainCache.Store(cacheKey, buf.String())
 		}
 	}
+}
+
+func explainPathRecursive(uiState *UIState, data *TreeData, uiData *UIData) {
+	cacheKey := explainCacheKey(data.path, true)
+	if cached, ok := uiState.explainCache.Load(cacheKey); ok {
+		slog.Debug("explain", slog.String("cached", cacheKey))
+		setDetailsText(uiState, fmt.Sprintf("%s [recursive]\n\n%s", data.path, cached))
+		return
+	}
+
+	slog.Debug("explain", slog.String("perform", cacheKey))
+	explainer := NewExplainer(*data.gvr, uiData.OpenAPIClient)
+	buf := bytes.Buffer{}
+	err := explainer.ExplainRecursive(&buf, data.path)
+	if err == nil {
+		setDetailsText(uiState, fmt.Sprintf("%s [recursive]\n\n%s", data.path, buf.String()))
+		uiState.explainCache.Store(cacheKey, buf.String())
+	}
+}
+
+func explainCacheKey(path string, recursive bool) string {
+	if recursive {
+		return path + "#recursive"
+	}
+	return path
 }
 
 func expandCollapseHJKL(uiState *UIState, expanded bool) error {
@@ -208,6 +257,30 @@ func expandCollapseHJKL(uiState *UIState, expanded bool) error {
 
 func setupListenersForResourceDetailsView(uiState *UIState) error {
 	uiState.apiResourcesDetailsView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyRune && event.Rune() == '/' {
+			if uiState.cmdInputIsOn {
+				return nil
+			}
+			uiState.cmdInput.SetLabel("Find:")
+			uiState.cmdInput.SetText(uiState.detailsSearchTerm)
+			uiState.cmdInputIsOn = true
+			uiState.cmdInputPurpose = cmdInputPurposeFind
+			uiState.mainLayout.AddItem(uiState.cmdInput, 3, 1, true)
+			setFocusOn(uiState, uiState.cmdInput)
+			return nil
+		}
+		if event.Key() == tcell.KeyRune && event.Rune() == 'n' {
+			selectNextDetailsMatch(uiState)
+			return nil
+		}
+		if event.Key() == tcell.KeyRune && event.Rune() == 'N' {
+			selectPreviousDetailsMatch(uiState)
+			return nil
+		}
+		if event.Key() == tcell.KeyEscape {
+			clearDetailsSearch(uiState)
+			return nil
+		}
 		if event.Key() == tcell.KeyTab {
 			setFocusOn(uiState, uiState.apiResourcesTreeView) // Switch focus to the TreeView
 			return nil
@@ -228,6 +301,10 @@ func setupListenersForCmdInput(uiState *UIState) error {
 				showFilteredTree(uiState, uiState.apiResourcesTreeView, searchTerm)
 			}
 
+			if uiState.cmdInputIsOn && uiState.cmdInputPurpose == cmdInputPurposeFind {
+				applyDetailsSearch(uiState, uiState.cmdInput.GetText())
+			}
+
 			// quit
 			if uiState.cmdInputIsOn && uiState.cmdInputPurpose == cmdInputPurposeCmd {
 				cmd := uiState.cmdInput.GetText()
@@ -239,7 +316,11 @@ func setupListenersForCmdInput(uiState *UIState) error {
 			uiState.cmdInput.SetText("")
 			uiState.cmdInputIsOn = false
 			uiState.mainLayout.RemoveItem(uiState.cmdInput)   // Hide the input field
-			setFocusOn(uiState, uiState.apiResourcesTreeView) // Focus back to main layout
+			if uiState.cmdInputPurpose == cmdInputPurposeFind {
+				setFocusOn(uiState, uiState.apiResourcesDetailsView)
+			} else {
+				setFocusOn(uiState, uiState.apiResourcesTreeView) // Focus back to main layout
+			}
 		}
 
 		// handle ESC: hide cmd-input on ESC
@@ -247,12 +328,138 @@ func setupListenersForCmdInput(uiState *UIState) error {
 			if uiState.cmdInputIsOn {
 				uiState.cmdInputIsOn = false
 				uiState.mainLayout.RemoveItem(uiState.cmdInput)   // Hide the input field
-				setFocusOn(uiState, uiState.apiResourcesTreeView) // Focus back to main layout
+				if uiState.cmdInputPurpose == cmdInputPurposeFind {
+					setFocusOn(uiState, uiState.apiResourcesDetailsView)
+				} else {
+					setFocusOn(uiState, uiState.apiResourcesTreeView) // Focus back to main layout
+				}
 			}
 		}
 	})
 
 	return nil
+}
+
+func setDetailsText(uiState *UIState, text string) {
+	uiState.detailsRawText = text
+	uiState.detailsSearchTerm = ""
+	uiState.detailsSearchMatches = nil
+	uiState.detailsSearchIndex = 0
+	uiState.apiResourcesDetailsView.Highlight()
+	uiState.apiResourcesDetailsView.SetText(text)
+}
+
+func applyDetailsSearch(uiState *UIState, term string) {
+	uiState.detailsSearchTerm = term
+	uiState.detailsSearchMatches = findDetailsMatches(uiState.detailsRawText, term)
+	uiState.detailsSearchIndex = 0
+	renderDetailsText(uiState)
+}
+
+func clearDetailsSearch(uiState *UIState) {
+	if uiState.detailsSearchTerm == "" && len(uiState.detailsSearchMatches) == 0 {
+		return
+	}
+	uiState.detailsSearchTerm = ""
+	uiState.detailsSearchMatches = nil
+	uiState.detailsSearchIndex = 0
+	renderDetailsText(uiState)
+}
+
+func selectNextDetailsMatch(uiState *UIState) {
+	if len(uiState.detailsSearchMatches) == 0 {
+		return
+	}
+	uiState.detailsSearchIndex = (uiState.detailsSearchIndex + 1) % len(uiState.detailsSearchMatches)
+	renderDetailsText(uiState)
+}
+
+func selectPreviousDetailsMatch(uiState *UIState) {
+	if len(uiState.detailsSearchMatches) == 0 {
+		return
+	}
+	uiState.detailsSearchIndex--
+	if uiState.detailsSearchIndex < 0 {
+		uiState.detailsSearchIndex = len(uiState.detailsSearchMatches) - 1
+	}
+	renderDetailsText(uiState)
+}
+
+func renderDetailsText(uiState *UIState) {
+	if len(uiState.detailsSearchMatches) == 0 {
+		uiState.apiResourcesDetailsView.Highlight()
+		uiState.apiResourcesDetailsView.ScrollToBeginning()
+		uiState.apiResourcesDetailsView.SetText(uiState.detailsRawText)
+		return
+	}
+
+	currentMatch := uiState.detailsSearchMatches[uiState.detailsSearchIndex]
+	uiState.apiResourcesDetailsView.SetText(buildDetailsSearchText(
+		uiState.detailsRawText,
+		uiState.detailsSearchMatches,
+		uiState.detailsSearchIndex,
+	))
+	uiState.apiResourcesDetailsView.Highlight(currentMatch.regionID)
+	uiState.apiResourcesDetailsView.ScrollTo(detailsSearchScrollRow(uiState.detailsRawText, currentMatch), 0)
+}
+
+func buildDetailsSearchText(text string, matches []detailsMatch, currentIndex int) string {
+	var b strings.Builder
+	last := 0
+	for i, match := range matches {
+		b.WriteString(text[last:match.start])
+		b.WriteString(`["`)
+		b.WriteString(match.regionID)
+		b.WriteString(`"]`)
+		if i == currentIndex {
+			b.WriteString(detailsSearchCurrentMatchStyle)
+		} else {
+			b.WriteString(detailsSearchMatchStyle)
+		}
+		b.WriteString(text[match.start:match.end])
+		b.WriteString(detailsSearchResetStyle)
+		b.WriteString(`[""]`)
+		last = match.end
+	}
+	b.WriteString(text[last:])
+	return b.String()
+}
+
+func findDetailsMatches(text, term string) []detailsMatch {
+	term = strings.TrimSpace(term)
+	if term == "" {
+		return nil
+	}
+
+	lowerText := strings.ToLower(text)
+	lowerTerm := strings.ToLower(term)
+	var matches []detailsMatch
+	offset := 0
+
+	for {
+		idx := strings.Index(lowerText[offset:], lowerTerm)
+		if idx == -1 {
+			break
+		}
+		start := offset + idx
+		end := start + len(term)
+		matches = append(matches, detailsMatch{
+			start:    start,
+			end:      end,
+			regionID: fmt.Sprintf("details-%d", len(matches)),
+		})
+		offset = end
+	}
+
+	return matches
+}
+
+func detailsSearchScrollRow(text string, match detailsMatch) int {
+	row := strings.Count(text[:match.start], "\n") - 1
+	if row < 0 {
+		return 0
+	}
+	return row
 }
 
 func getClosestParentThatHasChildren(uiState *UIState, node *tview.TreeNode) *tview.TreeNode {
@@ -272,6 +479,9 @@ func setupListenersForApp(uiState *UIState) error {
 	uiState.app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		// search input
 		if event.Key() == tcell.KeyRune && event.Rune() == '/' {
+			if uiState.app.GetFocus() == uiState.apiResourcesDetailsView {
+				return event
+			}
 			if uiState.cmdInputIsOn {
 				return nil
 			}
